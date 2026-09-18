@@ -5,15 +5,10 @@ int c_stringcmp(const char* a, const char* b) {
         if (*a != *b) {
             return 0;
         }
-        if (*b == NULLTERM) {
-            return 0;
-        }
         a++;
         b++;
     }
-
-
-    return 1;
+    return *a == *b;
 
 
 }

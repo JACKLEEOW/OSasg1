@@ -8,8 +8,8 @@ int main() {
   while (1) {
     char buffer[BUFFER_SIZE];
 
-    char str[] = "hello";
-    char str2[] = "hello";
+    char str[] = "hello12323";
+    char str2[] = "hello12323";
 
     ssize_t n = read(STDIN_FILENO, buffer, BUFFER_SIZE);
     if (n > 0) {
