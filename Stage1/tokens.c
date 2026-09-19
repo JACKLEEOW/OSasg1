@@ -32,7 +32,7 @@ Tokens create_tokens(char * s) {
         t.token_string_ptrs[t.num_tokens] = t.token_strings + i;
         t.num_tokens ++;
 
-        // move to the right until non-ws
+        // move to the right until ws character
         while(!c_isspace((unsigned char)s[i]) && s[i] != '\0') {t.token_strings[i] = s[i]; i++;}
         if (s[i] == '\0') break; // if character was null terminator, end
         t.token_strings[i] = '\0'; // otherwise, add a \0 separator
