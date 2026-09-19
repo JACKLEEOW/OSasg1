@@ -11,9 +11,9 @@ typedef struct {
 
 /*
 typedef struct {
-    char tokenStrings[MAX_INPUT_SIZE + 1];
-    char * Token[MAX_INPUT_SIZE + 1];
-    int numTokens;
+    char token_strings[MAX_INPUT_SIZE + 1];
+    Token tokens[MAX_INPUT_SIZE + 1];
+    int num_tokens;
 } Tokens;
 */
 
