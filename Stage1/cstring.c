@@ -73,14 +73,14 @@ size_t c_trim(char *s) {
     int i;
     for (i = left; i <= right; i++) {
         // printf("%c", s[i]);
-        s[left - i] = s[i];
+        s[i - left] = s[i];
     }
 
-    size_t lenght = (right - left + 1);
-    s[lenght] = '\0'; // re-add null terminator at end
-    // printf("left %d, right %d, len(%ld) ->", left, right, lenght);
+    size_t length = (right - left + 1);
+    s[length] = '\0'; // re-add null terminator at end
+    // printf("left %d, right %d, len(%ld) ->", left, right, length);
     // print_hidden_string(s);
-    return (lenght);
+    return (length);
 }
 
 int c_strcmp(const char * s1, const char * s2) {

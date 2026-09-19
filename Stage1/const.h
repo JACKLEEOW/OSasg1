@@ -11,4 +11,8 @@
 #define TO_STRING_HELPER(X) #X
 #define TO_STRING(X) TO_STRING_HELPER(X)
 
+#define RED   "\033[31m"
+#define GREEN "\033[32m"
+#define RESET "\033[0m"
+
 #endif

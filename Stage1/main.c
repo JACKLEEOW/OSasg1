@@ -1,13 +1,10 @@
 #include <unistd.h>
-#include "cstring.h"
-#include "const.h"
-#include "tokens.h"
 #include <stdio.h>
 #include <fcntl.h>
 
-#define RED   "\033[31m"
-#define GREEN "\033[32m"
-#define RESET "\033[0m"
+#include "const.h"
+#include "cstring.h"
+#include "tokens.h"
 
 const char CHAR_LIMIT_EXCEEDED[] =  RED "exceeded max character limit ("TO_STRING(MAX_INPUT_SIZE)")" RESET;
 const char DOLLAR_SIGN[] = GREEN "$ " RESET;
@@ -16,15 +13,11 @@ void flushFD0();
 
 int main(int argc, char ** argv) {
     while (1) {
-        char inputBuffer[MAX_INPUT_SIZE + 1] = {'\0'};
+        char input_buffer[MAX_INPUT_SIZE + 1] = {'\0'};
         ssize_t bytes;
 
         write(STDOUT_FILENO, DOLLAR_SIGN, c_strlen(DOLLAR_SIGN));
-        // if (bytes == ERROR_NUMBER) {
-        //     return -1;
-        // }
-
-        bytes = read(STDIN_FILENO, inputBuffer, MAX_INPUT_SIZE + 1);
+        bytes = read(STDIN_FILENO, input_buffer, MAX_INPUT_SIZE + 1);
 
         // if read over max input limit
         if (bytes > MAX_INPUT_SIZE) {
@@ -33,23 +26,23 @@ int main(int argc, char ** argv) {
             flushFD0();
             continue;
         }
-        
-        // printf("INPUT og: _>");
-        // print_hidden_string(inputBuffer);
-        //size_t strSize = c_trim(inputBuffer);
-        size_t strSize = bytes;
-        if (c_strcmp(inputBuffer, "exit") == 0) {
+
+        size_t str_size = c_trim(input_buffer);
+        // size_t strSize = bytes;
+
+        if (c_strcmp(input_buffer, "exit") == 0) {
             return 0;
-        }
-        else if (strSize > 0) {
-            Tokens t = createTokens(inputBuffer);
-            write(STDOUT_FILENO, inputBuffer, strSize);
+            
+        } else if (str_size > 0) {
+            Tokens t = create_tokens(input_buffer);
+            write(STDOUT_FILENO, input_buffer, str_size);
             write(STDOUT_FILENO, "\n", 1);
 
-            // testTokens(&t);
+            test_tokens(&t);
         }
 
     }
+
     return 0;
 }
 
