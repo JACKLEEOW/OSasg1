@@ -5,6 +5,8 @@
 #define DOLLAR_SIGN "$ "
 #define EXIT "exit"
 #define NEWLINE '\n'
+#define ERROR_MSG "ERROR BUFFER LIM REACHED"
+#define EXIT_MSG "Powering off ---- Farewell, Master!"
 int main() {
 
   while (1) {
@@ -12,6 +14,13 @@ int main() {
     char buffer[BUFFER_SIZE];
 
     ssize_t n = read(STDIN_FILENO, buffer, BUFFER_SIZE);
+    if (n == BUFFER_SIZE &&
+        buffer[n - 1] != '\n') { // if buffer limit is exceeded
+      write(STDOUT_FILENO, ERROR_MSG, sizeof(ERROR_MSG) - 1); // write error and
+      write(STDOUT_FILENO, "\n",1);      // probably should change these hardcoded vals
+      flush_stdin(); // clean buffer
+      continue;
+    }
     if (n <= 0) {
       break;
     }
@@ -28,10 +37,11 @@ int main() {
     }
 
     if (c_stringcmp(buffer, EXIT) == 1) {
+      write(STDOUT_FILENO, EXIT_MSG, sizeof(EXIT_MSG) - 1);
       return 0;
     }
-    write(STDOUT_FILENO,buffer,n);
-    write(STDOUT_FILENO,"\n", 1);
+    write(STDOUT_FILENO, buffer, n);
+    write(STDOUT_FILENO, "\n", 1);
   }
   return 0;
 }
