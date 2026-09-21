@@ -16,8 +16,8 @@ int is_space(char * byte){
 int main() {
     // Some constants to move later.
     char msg[] = "STARTING PROGRAM\n";
-    int buffer_size = 100;
-    char buffer[buffer_size];
+    int MAX_BUFFER_SIZE = 100;
+    char buffer[MAX_BUFFER_SIZE];
 
     // Write starting message and start loop
     write(1, msg, sizeof(msg) - 1);
