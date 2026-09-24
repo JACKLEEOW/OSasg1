@@ -9,6 +9,12 @@
 const char CHAR_LIMIT_EXCEEDED[] =  RED "exceeded max character limit ("TO_STRING(MAX_INPUT_SIZE)")" RESET;
 const char DOLLAR_SIGN[] = GREEN "$ " RESET;
 
+// Tokens t = {
+//     .token_strings = {'\0'},
+//     .token_string_ptrs = {NULL},
+//     .num_tokens = 0
+// };
+    
 void flushFD0();
 
 int main(int argc, char ** argv) {
@@ -32,9 +38,10 @@ int main(int argc, char ** argv) {
 
         if (c_strcmp(input_buffer, "exit") == 0) {
             return 0;
-            
+
         } else if (str_size > 0) {
-            Tokens t = create_tokens(input_buffer);
+            Tokens t;
+            create_tokens(&t, input_buffer);
             write(STDOUT_FILENO, input_buffer, str_size);
             write(STDOUT_FILENO, "\n", 1);
 
