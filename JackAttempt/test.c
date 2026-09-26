@@ -1,4 +1,4 @@
-#include "cstring.h"
+#include "old_cstring.h"
 #include "stdio.h"
 #include <unistd.h>
 #define BUFFER_SIZE 128
