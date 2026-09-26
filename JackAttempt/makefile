@@ -1,7 +1,7 @@
 CC      := gcc
 CFLAGS  := -Wall -Wextra -std=c11 -g
 LDLIBS  := -lcunit
-SRCS    := main.c cstring.c tokens.c special_tokens.c
+SRCS    := main.c cstring.c tokens.c special_tokens.c jobs.c
 OBJS    := $(SRCS:.c=.o)
 
 .PHONY: all clean test
