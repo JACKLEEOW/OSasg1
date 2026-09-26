@@ -1,21 +1,32 @@
+CC      := gcc
+CFLAGS  := -Wall -Wextra -std=c11 -g
+LDLIBS  := -lcunit
+SRCS    := main.c cstring.c tokens.c special_tokens.c
+OBJS    := $(SRCS:.c=.o)
 
-all: main.o cstring.o tokens.o
-	gcc main.o cstring.o tokens.o -o prog
+.PHONY: all clean test
 
-cstring_test: cstring_test.o cstring.o cstring.h
-	gcc cstring_test.o cstring.o -o test_cstring -lcunit
+all: prog
 
-main.o: main.c tokens.h
-	gcc -c main.c
+prog: $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@
 
-cstring_test.o: test_cstring.c cstring.h
-	gcc -c test_cstring.c
+# Pattern rule: any .o comes from the matching .c
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-cstring.o: cstring.c cstring.h 
-	gcc -c cstring.c
+# Explicit header dependencies (make can't infer these on its own)
+main.o: tokens.h
+cstring.o: cstring.h
+tokens.o: tokens.h cstring.h const.h
+special_tokens.o: tokens.h
+cstring_test.o: cstring.h
 
-tokens.o: tokens.c tokens.h cstring.h const.h
-	gcc -c tokens.c
+test: test_cstring
+	./test_cstring
+
+test_cstring: cstring_test.o cstring.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:
-	rm *.o prog test_cstring
+	rm -f $(OBJS) cstring_test.o prog test_cstring
