@@ -4,16 +4,9 @@
 #include "const.h"
 #include <stdbool.h>
 
-typedef struct {
-    char token_strings[MAX_INPUT_SIZE + 1];
-    char * token_string_ptrs[MAX_INPUT_SIZE + 1];
-    int num_tokens;
-} Tokens;
-
-
 // typedef struct {
 //     char token_strings[MAX_INPUT_SIZE + 1];
-//     Token tokens[MAX_INPUT_SIZE + 1];
+//     char * token_string_ptrs[MAX_INPUT_SIZE + 1];
 //     int num_tokens;
 // } Tokens;
 
@@ -24,8 +17,8 @@ typedef enum {
     TOKEN_OR,
     TOKEN_REDIRECT_IN,
     TOKEN_REDIRECT_OUT,
+    TOKEN_REDIRECT_OUT_APPEND,
     TOKEN_BACKGROUND,
-    TOKEN_TEST,
     _NUMB_SPECIAL_TOKENS,
 
     TOKEN_WORD,
@@ -40,12 +33,18 @@ typedef struct {
     TokenType type;
 } Token;
 
-extern const char * SPECIAL_TOKENS[_NUMB_SPECIAL_TOKENS];
+typedef struct {
+    char cstring_storage[MAX_INPUT_SIZE + 1];
+    Token token_array[MAX_INPUT_SIZE + 1];
+    int num_tokens;
+} Tokens;
 
-extern const int SPECIAL_TOKENS_SIZE[_NUMB_SPECIAL_TOKENS];
+extern char * SPECIAL_TOKENS[_NUMB_SPECIAL_TOKENS];
+
+extern int SPECIAL_TOKENS_SIZE[_NUMB_SPECIAL_TOKENS];
 
 void create_tokens(Tokens * t, char * s);
-char * index_tokens(Tokens * t, int index);
+Token * index_tokens(Tokens * t, int index);
 int num_tokens(Tokens * t);
 void test_tokens(Tokens * t);
 
@@ -57,8 +56,11 @@ void test_tokens(Tokens * t);
 int set_special_candidates(const char c);
 
 /**
- * @brief reads from the global candidates, compares 
- * @param starting the location at which a token could appear
+ * @brief used in conjuction with set_special_candidates.\n
+ * reads from the global candidates, determines wether or not that from a pointer to the character's starting position, it is a valid special tokens.
+ * @param starting a pointer from a cstring in which the character appeared
+ * @param return_type the returning type of the token, TOKEN_INVALID if invalid.
+ * @param return_length the length 
  */
 void validate_special_candidates(const char * starting, TokenType * return_type, int * return_length);
 

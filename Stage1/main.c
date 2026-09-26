@@ -17,7 +17,7 @@ const char DOLLAR_SIGN[] = GREEN "$ " RESET;
     
 void flushFD0();
 
-int main(int argc, char ** argv) {
+int main() {
     while (1) {
         char input_buffer[MAX_INPUT_SIZE + 1] = {'\0'};
         ssize_t bytes;

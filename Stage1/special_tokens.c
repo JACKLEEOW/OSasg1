@@ -1,27 +1,30 @@
 #include "tokens.h"
 #include <stdio.h>
 
-const char * SPECIAL_TOKENS[_NUMB_SPECIAL_TOKENS] = {
-    [TOKEN_PIPE] = "|&a",
-    [TOKEN_OR] = "|&|",
+/* ---------------------------- Defined operators --------------------------- */
+char * SPECIAL_TOKENS[_NUMB_SPECIAL_TOKENS] = {
+    [TOKEN_PIPE] = "|",
+    [TOKEN_OR] = "||",
     [TOKEN_REDIRECT_IN] = "<",
-    [TOKEN_REDIRECT_OUT] = ">",
-    [TOKEN_BACKGROUND] = "&",
-    [TOKEN_TEST] = ">X*|&a"
+    [TOKEN_REDIRECT_OUT] = "&",
+    [TOKEN_REDIRECT_OUT_APPEND] = ">>",
+    [TOKEN_BACKGROUND] = "|&"
 };
 
-const int SPECIAL_TOKENS_SIZE[_NUMB_SPECIAL_TOKENS] = {
-    [TOKEN_PIPE] = 3,
-    [TOKEN_OR] = 3,
+int SPECIAL_TOKENS_SIZE[_NUMB_SPECIAL_TOKENS] = {
+    [TOKEN_PIPE] = 1,
+    [TOKEN_OR] = 2,
     [TOKEN_REDIRECT_IN] = 1,
     [TOKEN_REDIRECT_OUT] = 1,
-    [TOKEN_BACKGROUND] = 1,
-    [TOKEN_TEST] = 6
+    [TOKEN_REDIRECT_OUT_APPEND] = 2,
+    [TOKEN_BACKGROUND] = 2,
 };
 
+/* --------------------------------- Globals -------------------------------- */
 TokenType _special_stack[_NUMB_SPECIAL_TOKENS];
 int _stack_fill = 0;
 
+/* -------------------------- Function Definitions -------------------------- */
 int set_special_candidates(const char c) {
     _stack_fill = 0;
     int i;
@@ -91,7 +94,6 @@ void validate_special_candidates(const char * starting, TokenType * return_type,
         type = curr_token;
         max_size = SPECIAL_TOKENS_SIZE[curr_token];
     }
-
 
     *(return_length) = (max_size != 0) ? max_size : 1;
     *(return_type) = type;
