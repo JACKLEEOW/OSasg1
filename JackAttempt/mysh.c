@@ -5,7 +5,7 @@
 int main(int argc, char *argv[], char *envp[])
 {
   int exitShell = 0;
-  struct Command cmd;
+  Command cmd;
   run_command(&cmd,envp);
   
 

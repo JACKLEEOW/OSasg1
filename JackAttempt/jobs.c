@@ -8,7 +8,7 @@
 #define PARENT_MSG "im parent\n"
 
 
-void run_command(struct Command *cmd, char *envp[]) {
+void run_command(Command *cmd, char *envp[]) {
     
     pid_t pid = fork(); // 0 is child, >0 parent -1 is fail no child
 
@@ -17,7 +17,8 @@ void run_command(struct Command *cmd, char *envp[]) {
         return;
     }
     if(pid == 0) {
-        write(STDOUT_FILENO,CHILD_MSG, c_strlen(CHILD_MSG));
+        int c = write(STDOUT_FILENO,CHILD_MSG, c_strlen(CHILD_MSG));
+        int exec = execve(cmd->argv[0], cmd->argv,envp);
     }
     else if(pid > 0 ) {
         write(STDOUT_FILENO, PARENT_MSG, c_strlen(PARENT_MSG));

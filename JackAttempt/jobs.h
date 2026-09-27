@@ -1,14 +1,8 @@
 #ifndef JOBS_H
 #define JOBS_H
 
-#define MAX_ARGS 16     /* TO DO */
+#include "parser.h"
 
-struct Command
-{
-  char *argv[MAX_ARGS+1];
-  unsigned int argc;
-};
-
-void run_command(struct Command *cmd, char* envp[]);
+void run_command(Command *cmd, char *envp[]);
 
 #endif
