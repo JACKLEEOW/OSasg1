@@ -4,28 +4,19 @@
 #include "const.h"
 #include <stdbool.h>
 
-// typedef struct {
-//     char token_strings[MAX_INPUT_SIZE + 1];
-//     char * token_string_ptrs[MAX_INPUT_SIZE + 1];
-//     int num_tokens;
-// } Tokens;
-
-
 typedef enum {
     
     TOKEN_PIPE,
-    TOKEN_OR,
     TOKEN_REDIRECT_IN,
     TOKEN_REDIRECT_OUT,
     TOKEN_REDIRECT_OUT_APPEND,
     TOKEN_BACKGROUND,
+    
     _NUMB_SPECIAL_TOKENS,
 
     TOKEN_WORD,
-
-    // A special token types used for the special token nfa's
-    TOKEN_INPROGRESS,
-    TOKEN_INVALID 
+    _TOKEN_INPROGRESS,
+    _TOKEN_INVALID 
 } TokenType;
 
 typedef struct {
@@ -43,9 +34,12 @@ extern char * SPECIAL_TOKENS[_NUMB_SPECIAL_TOKENS];
 
 extern int SPECIAL_TOKENS_SIZE[_NUMB_SPECIAL_TOKENS];
 
-void create_tokens(Tokens * t, char * s);
 Token * index_tokens(Tokens * t, int index);
+
 int num_tokens(Tokens * t);
+
+void create_tokens(Tokens * t, const char * s);
+
 void test_tokens(Tokens * t);
 
 /**
@@ -60,13 +54,9 @@ int set_special_candidates(const char c);
  * reads from the global candidates, determines wether or not that from a pointer to the character's starting position, it is a valid special tokens.
  * @param starting a pointer from a cstring in which the character appeared
  * @param return_type the returning type of the token, TOKEN_INVALID if invalid.
- * @param return_length the length 
+ * @param return_length the length  
  */
 void validate_special_candidates(const char * starting, TokenType * return_type, int * return_length);
 
-// /**
-//  * 
-//  */
-int is_special_candidate(const char c);
 
 #endif

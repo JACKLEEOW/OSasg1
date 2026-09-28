@@ -3,88 +3,50 @@
 #include "cstring.h"
 #include <stdio.h>
 
-// Look into inline
-int is_quote(char c);
-int is_digit(char c);
-int is_space(char c);
-int is_nullc(char c);
+/* -------------------------------------------------------------------------- */
+/*                      CONSTANTS, ENUMS, HELPER HEADERS                      */
+/* -------------------------------------------------------------------------- */
 
-void write_token(Token * token, TokenType type, char * s);
+#define PEEK        (tz->input[tz->r])
+#define ADVANCE     (tz->r++)
+#define CONSUME     (tz->input[tz->r++])
+#define WRITE(c)    (tz->output[tz->w++] = (c))
 
-int special_token_helper(int * i, int * j, char * s, Tokens * t, bool start);
+typedef enum {
+    STATE_START_TOKEN,
+    STATE_QUOTE_WRITE_TOKEN,
+    STATE_NORMAL_WRITE_TOKEN,
+    STATE_SPECIAL_TOKEN,
+    STATE_EXIT,
+} State;
 
-void create_tokens(Tokens * t, char * s) {
-    // init 
-    t->num_tokens = 0;
+typedef struct {
+    int r; // read head
+    int w; // write head
+    const char * input;
+    char * output;
+    Tokens * tokens;
+    char quote;
+    int at_start; // used to for a specific condition found in special token
+} Tokenizer;
 
-    if (s[0] == '\0' || s == NULL) return;
 
-    int i = 0; // iterator for input string
-    int j = 0; // iterator for copied string
-    char curr_quote = '\0';
+static State handle_start_token(Tokenizer * tz);
+static State handle_normal_write_token(Tokenizer * tz);
+static State handle_quote_write_token(Tokenizer * tz);
+static State handle_special_token(Tokenizer * tz);
 
-    // loops runs once for a word
-    while (1) {
-        
-        // move to the right until non-ws character (Beginning of the token)
-        while ( is_space(s[i]) ) { i++; }
+static void write_token(Token * token, TokenType type, char * text);
 
-        // exit if end of buffer
-        if ( is_nullc(s[i]) ) break;
+static inline int is_quote(char c) { return (c == '\'' || c =='"'); }
+static inline int is_digit(char c) { return (c >= '0' && c <='9'); }
+static inline int is_space(char c) { return c_isspace((unsigned char) c); }
+static inline int is_nullc(char c) { return c == '\0'; }
+static int is_special_candidate(const char c) { for (int i = 0; i < _NUMB_SPECIAL_TOKENS; i++) { if (c == SPECIAL_TOKENS[i][0]) return 1; } return 0; }
 
-        if ( set_special_candidates(s[i]) ) {
-            // will attempt to tokenize the alleged special token, otherwise **P as normal character
-            if ( special_token_helper(&i, &j, s, t, true) ) {
-                goto End;
-            }
-        } else {
-            if ( is_quote(s[i]) ) { curr_quote = s[i]; i++; } // skip pass quote
-
-            Token * token_ptr = &(t->token_array[t->num_tokens]);
-            char * cstring_location = t->cstring_storage + (j);
-            write_token(token_ptr, TOKEN_WORD, cstring_location);
-            t->num_tokens ++;
-        }
-
-        // quote mode
-        if (curr_quote) {
-            QuoteMode:
-            // move to the right until closing quote character (read anything)
-            while( s[i] != curr_quote && s[i] != '\0') {t->cstring_storage[j] = s[i]; i++; j++;}
-            if (s[i] == '\0') {t->cstring_storage[j] = '\0'; break;} // maybe set a flag
-            curr_quote = '\0'; // reset quote
-            i++;
-        }
-            
-        GoNext:
-        // move to the right until ws character, quote, or operator
-        while ( !is_space(s[i]) && 
-                !is_nullc(s[i]) && 
-                !is_quote(s[i]) && 
-                !is_special_candidate(s[i])
-            ) { t->cstring_storage[j++] = s[i++]; }
-
-        if ( is_nullc(s[i]) ) {t->cstring_storage[j] = '\0'; break;} // if character was null terminator, end
-
-        // found in between (operators)
-        if ( is_quote(s[i]) ) {
-            curr_quote = s[i]; 
-            i++; 
-            goto QuoteMode; // if quote found, skip pass string pointer, l"s" -> ls, cstring pointer to l from previous
-        } 
-
-        if (set_special_candidates(s[i])) {
-            if (!special_token_helper(&i, &j, s, t, false)) goto GoNext;
-            else goto End;
-        }
-        End:
-        t->cstring_storage[j] = '\0'; // otherwise, add a \0 separator
-        i++;
-        j++;
-    }
-
-    return;
-}
+/* -------------------------------------------------------------------------- */
+/*                            FUNCTION DEFINITIONS                            */
+/* -------------------------------------------------------------------------- */
 
 Token * index_tokens(Tokens * t, int i) {
     if (i < 0 || i >= t->num_tokens) return NULL;
@@ -93,6 +55,45 @@ Token * index_tokens(Tokens * t, int i) {
 
 int num_tokens(Tokens * t) {
     return t->num_tokens;
+}
+
+void create_tokens(Tokens * tokens, const char * input_buffer) {
+    
+    // Init
+    tokens->num_tokens = 0;
+    if (input_buffer == NULL || input_buffer[0] == '\0') return;
+
+    Tokenizer tz = {
+        .r = 0,
+        .w = 0,
+        .input = input_buffer,
+        .output = tokens->cstring_storage,
+        .tokens = tokens,
+        .quote = '\0',
+        .at_start = 0
+    };
+
+    State state = STATE_START_TOKEN;
+    while (state != STATE_EXIT) {
+
+        switch (state) {
+        case STATE_START_TOKEN:
+            state = handle_start_token(&tz);
+            break;
+        case STATE_QUOTE_WRITE_TOKEN:
+            state = handle_quote_write_token(&tz);
+            break;
+        case STATE_NORMAL_WRITE_TOKEN:
+            state = handle_normal_write_token(&tz);
+            break;
+        case STATE_SPECIAL_TOKEN:
+            state = handle_special_token(&tz);
+            break;
+        case STATE_EXIT:
+            break;
+        }
+    }
+    return;
 }
 
 void test_tokens(Tokens * t) {
@@ -104,77 +105,213 @@ void test_tokens(Tokens * t) {
     }
 }
 
-int is_quote(char c) {
-    return (c == '\'' || c =='"');
+/* -------------------------------------------------------------------------- */
+/*                         HELPER FUNCTION DEFINITIONS                        */
+/* -------------------------------------------------------------------------- */
+
+static State handle_start_token(Tokenizer * tz) {
+    Tokens * tokens = tz->tokens;
+
+    // move to the right until non-ws character (Beginning of the token)
+    while (is_space(PEEK)) ADVANCE;
+    if (is_nullc(PEEK)) return STATE_EXIT;
+
+    Token * token = &(tokens->token_array[tokens->num_tokens]);
+    char * str_location = tokens->cstring_storage + (tz->w);
+
+    write_token(token, TOKEN_WORD, str_location);
+
+    if (is_quote(PEEK)) {
+        tz->quote = CONSUME; // Ignore quote
+        return STATE_QUOTE_WRITE_TOKEN;
+        
+    } else if (set_special_candidates(PEEK)) {
+        tz->at_start = 1;
+        return STATE_SPECIAL_TOKEN;
+    }
+
+    return STATE_NORMAL_WRITE_TOKEN;
 }
 
-int is_digit(char c) {
-    return (c >= '0' && c <='9');
+static State handle_normal_write_token(Tokenizer * tz) {
+    Tokens * tokens = tz->tokens;
+
+
+    // move to the right until ws character, quote, or operator
+    while ( !is_space(PEEK) && 
+            !is_nullc(PEEK) && 
+            !is_quote(PEEK) && 
+            !is_special_candidate(PEEK)
+        ) { WRITE(CONSUME); }
+
+    
+    if (is_quote(PEEK)) {
+        tz->quote = CONSUME; 
+        return STATE_QUOTE_WRITE_TOKEN; // if quote found, skip pass string pointer, l"s" -> ls, cstring pointer to l from previous
+    } else if (set_special_candidates(PEEK)) {
+        tz->at_start = 0;
+        return STATE_SPECIAL_TOKEN;
+    }
+    
+    // End current token's string
+    WRITE('\0'); 
+    tokens->num_tokens++;
+
+    // Reached the end of the input buffer
+    if (is_nullc(PEEK)) return STATE_EXIT;
+    return STATE_START_TOKEN;
 }
 
-int is_space(char c) {
-    return c_isspace((unsigned char) c);
+static State handle_quote_write_token(Tokenizer * tz) {
+    while (PEEK != tz->quote && !is_nullc(PEEK)) { WRITE(CONSUME); }
+    if (is_nullc(PEEK)) {
+        WRITE('\0'); 
+        tz->tokens->num_tokens++;
+        return STATE_EXIT;
+    }
+    // safe to pass to handle_normal_write_token to deal with \0
+    tz->quote = '\0';
+    ADVANCE;
+    return STATE_NORMAL_WRITE_TOKEN;
 }
 
-int is_nullc(char c) {
-    return c == '\0';
+static State handle_special_token(Tokenizer * tz) {
+    Tokens * tokens = tz->tokens;
+    TokenType token_type;
+    int token_size;
+    validate_special_candidates(tz->input + tz->r, &token_type, &token_size); 
+
+    if (token_type != _TOKEN_INVALID) {
+        
+        //special case a|, clean up previous token
+        if (!(tz->at_start)) {
+            WRITE('\0');
+            tokens->num_tokens++;
+        }
+
+        tz->r += token_size;
+        
+        Token * token = &(tokens->token_array[tokens->num_tokens]);
+        write_token(token, token_type, SPECIAL_TOKENS[token_type]);
+        tokens->num_tokens++;
+        return STATE_START_TOKEN;
+    }
+
+    // otherwise just write like normal character
+    WRITE(CONSUME);
+    return STATE_NORMAL_WRITE_TOKEN;
 }
 
-int is_special_candidate(const char c) {
-    int i;
-    for (i = 0; i < _NUMB_SPECIAL_TOKENS; i++) { if (c == SPECIAL_TOKENS[i][0]) return 1; }
-    return 0;
+static void write_token(Token * token, TokenType type, char * text) {
+    token->type = type;
+    token->text = text;
 }
+
+    /*
+    // init 
+    t->num_tokens = 0;
+
+    if (input_buffer == NULL || input_buffer[0] == '\0') return;
+
+    int read_head = 0; // iterator for input string
+    int write_head = 0; // iterator for copied string
+    char curr_quote = '\0';
+
+    // loops runs once for a word
+    while (1) {
+        
+        // move to the right until non-ws character (Beginning of the token)
+        while ( is_space(input_buffer[read_head]) ) { read_head++; }
+
+        // exit if end of buffer
+        if ( is_nullc(input_buffer[read_head]) ) break;
+        
+        if ( set_special_candidates(input_buffer[read_head]) ) {
+            // will attempt to tokenize the alleged special token, otherwise **P as normal character
+            if ( special_token_helper(&read_head, &write_head, input_buffer, t, true) ) {
+                goto End;
+            }
+        } else {
+            if ( is_quote(input_buffer[read_head]) ) { curr_quote = input_buffer[read_head]; read_head++; } // skip pass quote character
+            
+            Token * token_ptr = &(t->token_array[t->num_tokens]);
+            char * cstring_location = t->cstring_storage + (write_head);
+            write_token(token_ptr, TOKEN_WORD, cstring_location);
+            t->num_tokens ++;
+        }
+       
+        // quote mode
+        if (curr_quote) {
+            QuoteMode:
+            // move to the right until closing quote character (read anything)
+            while( input_buffer[read_head] != curr_quote && !is_nullc(input_buffer[read_head]) ) {t->cstring_storage[write_head] = input_buffer[read_head]; read_head++; write_head++;}
+            if ( is_nullc(input_buffer[read_head]) ) {t->cstring_storage[write_head] = '\0'; break;} // maybe set a flag
+            curr_quote = '\0'; // reset quote
+            read_head++;
+        }
+            
+        MidSection:
+        // move to the right until ws character, quote, or operator
+        while ( !is_space(input_buffer[read_head]) && 
+                !is_nullc(input_buffer[read_head]) && 
+                !is_quote(input_buffer[read_head]) && 
+                !is_special_candidate(input_buffer[read_head])
+            ) { t->cstring_storage[write_head++] = input_buffer[read_head++]; }
+
+        if ( is_nullc(input_buffer[read_head]) ) {t->cstring_storage[write_head] = '\0'; break;} // if character was null terminator, end
+
+        // found in between (operators)
+        if ( is_quote(input_buffer[read_head]) ) {
+            curr_quote = input_buffer[read_head]; 
+            read_head++; 
+            goto QuoteMode; // if quote found, skip pass string pointer, l"s" -> ls, cstring pointer to l from previous
+        } 
+
+        if (set_special_candidates(input_buffer[read_head])) {
+            if (!special_token_helper(&read_head, &write_head, input_buffer, t, false)) goto MidSection;
+            else goto End;
+        }
+        End:
+        t->cstring_storage[write_head] = '\0'; // otherwise, add a \0 separator
+        read_head++;
+        write_head++;
+    }
+    */
+
 
 /**
  * 
  * i points to the LAST char of the alleged special tokencstring_storage
  * if the token was found to be invalid, add it to the buffer using j
  */
-int special_token_helper(int * i, int * j, char * s, Tokens * t, bool start) {
-    TokenType token_type;
-    int token_size;
-    validate_special_candidates(s + *i, &token_type, &token_size); 
 
-    if (token_type != TOKEN_INVALID) {
-        *i += (token_size - 1);
+// int special_token_helper(int * i, int * j, const char * s, Tokens * t, bool start);
+// int special_token_helper(int * i, int * j, const char * s, Tokens * t, bool start) {
+//     TokenType token_type;
+//     int token_size;
+//     validate_special_candidates(s + *i, &token_type, &token_size); 
 
-        Token * token_ptr = &(t->token_array[t->num_tokens]);
-        write_token(token_ptr, token_type, SPECIAL_TOKENS[token_type]);
-        t->num_tokens ++;
-        return 1;
-    }
+//     if (token_type != TOKEN_INVALID) {
+//         *i += (token_size - 1);
 
-    if (start) {
-        // t->token_string_ptrs[t->num_tokens] = t->cstring_storage + (*j);
-        // t->num_tokens ++;
+//         Token * token_ptr = &(t->token_array[t->num_tokens]);
+//         write_token(token_ptr, token_type, SPECIAL_TOKENS[token_type]);
+//         t->num_tokens ++;
+//         return 1;
+//     }
 
-        Token * token_ptr = &(t->token_array[t->num_tokens]);
-        char * cstring_location = t->cstring_storage + (*j);
-        write_token(token_ptr, token_type, cstring_location);
-        t->num_tokens ++;
-    }
-    // int k;
-    // for (k = 0; k < token_size; k++) {
-    //     t->cstring_storage[*(j)] = s[*(i)];
-    //     (*j)++;
-    //     (*i)++;
+//     if (start) {
 
-    // }
+//         Token * token_ptr = &(t->token_array[t->num_tokens]);
+//         char * cstring_location = t->cstring_storage + (*j);
+//         write_token(token_ptr, TOKEN_WORD, cstring_location);
+//         t->num_tokens ++;
+//     }
 
-    // write character to storage
-    t->cstring_storage[*(j)] = s[*(i)];
-    (*j)++;
-    (*i)++;
+//     // write character to storage
+//     t->cstring_storage[*(j)] = s[*(i)];
+//     (*j)++;
+//     (*i)++;
 
-    // printf("i: %d j:%d\n", *i,*j);
-    // printf("char: %c\n", s[(*i)]);
-    // printf("Size: %d\n", token_size);
-
-    return 0;  
-}
-
-void write_token(Token * token, TokenType type, char * s) {
-    token->type = type;
-    token->text = s;
-}
+//     return 0;  
+// }
