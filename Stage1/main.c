@@ -45,7 +45,10 @@ int main() {
             write(STDOUT_FILENO, input_buffer, str_size);
             write(STDOUT_FILENO, "\n", 1);
 
+            Pipeline p;
             test_tokens(&t);
+            parse_tokens(&t, &p);
+            test_parse(&p);        
         }
 
     }
