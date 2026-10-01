@@ -9,15 +9,15 @@
 typedef struct {
     char * argv[MAX_ARGS + 1];
     unsigned int argc;
-    char * infile;
-    char * outfile;
-    int append;
 } Command;
 
 typedef struct {
     Command stages[MAX_PIPELINE_STAGES];
     int num_stages;
     int background;
+    char * infile;
+    char * outfile;
+    int append;
 } Pipeline;
 
 typedef enum {
