@@ -4,12 +4,10 @@
 
 ParseStatus new_command(Pipeline * pipeline);
 void append_null(Command *c);
+void reset_pipeline(Pipeline * pipeline);
 
 ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
-  pipeline->num_stages = 0;
-  pipeline->background = 0;
-  pipeline->infile = NULL;
-  pipeline->outfile = NULL;
+  reset_pipeline(pipeline);
 
   if(new_command(pipeline) == PAR_ERROR){ return PAR_ERROR;}
   int i = 0; // Iterate over every token
@@ -18,7 +16,7 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
     Token cur_token = tokens->token_array[i];
     Command *cur_command = &(pipeline->stages[pipeline->num_stages]);
     append_null(cur_command);
-    Token next_token; // For redirects
+    Token * next_token; // For redirects
 
     switch (cur_token.type) {
       case TOKEN_PIPE:
@@ -33,15 +31,23 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
         // set infile as next token
         if(i+1 >= tokens->num_tokens) { return PAR_ERROR;}
         i++;
-        next_token = tokens->token_array[i];
-        pipeline->infile = next_token.text;
+        // next_token = tokens->token_array[i];
+        next_token = index_tokens(tokens, i);
+        if(next_token->type != TOKEN_WORD){
+          return PAR_ERROR;
+        }
+        pipeline->infile = next_token->text;
         break;
       case TOKEN_REDIRECT_OUT:
         // set outfile as next token
         if(i+1 >= tokens->num_tokens) { return PAR_ERROR;}
         i++;
-        next_token = tokens->token_array[i];
-        pipeline->outfile = next_token.text;
+        // next_token = tokens->token_array[i];
+        next_token = index_tokens(tokens, i);
+        if(next_token->type != TOKEN_WORD){
+          return PAR_ERROR;
+        }
+        pipeline->outfile = next_token->text;
         break;
 
       default:
@@ -77,6 +83,20 @@ Command *index_command(Pipeline * pipeline, int i) {
     if (i < 0 || i > pipeline->num_stages) return NULL;
     return &(pipeline->stages[i]);
 }
+
+void reset_pipeline(Pipeline* pipeline){
+  //int i = 0;
+  for(int i = 0; i < MAX_PIPELINE_STAGES; i++){
+    Command com = pipeline->stages[i];
+    com.argv[0] = NULL;
+    com.argc = 0;
+  }
+  pipeline->num_stages = 0;
+  pipeline->background = 0;
+  pipeline->infile = NULL;
+  pipeline->outfile = NULL;
+}
+
 
 void test_parse(Pipeline *pipeline){
 
