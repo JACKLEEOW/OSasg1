@@ -1,6 +1,7 @@
 #include "tokens.h"
 #include "const.h"
 #include "cstring.h"
+#include <stddef.h>
 #include <stdio.h>
 
 /* -------------------------------------------------------------------------- */
@@ -21,28 +22,49 @@ typedef enum {
 } State;
 
 typedef struct {
-    int r; // read head
-    int w; // write head
-    const char * input;
-    char * output;
-    Tokens * tokens;
-    char quote;
-    int at_start; // used to for a specific condition found in special token
+    int r;              // read head
+    int w;              // write head
+    const char * input; // read from
+    char * output;      // write to
+    Tokens * tokens;    // token container
+    char quote;          
+    int at_start;       // used to for a specific condition found in special token
 } Tokenizer;
 
-
+/**
+ * @brief finds the first none whitespace character, init the next token
+ */
 static State handle_start_token(Tokenizer * tz);
+
+/**
+ * @brief writes all following non-whitespace, non-terminating, non-special characters, handles closing the current token
+ */
 static State handle_normal_write_token(Tokenizer * tz);
+
+/**
+ * @brief writes all following character up to the next matching quote
+ */
 static State handle_quote_write_token(Tokenizer * tz);
+
+/**
+ * @brief attempts to init a new token based on the tokens defined in special_tokens.c,
+ * either fills the token out with the special token, or just write the current char as 
+ * it wasn't a token
+ */
 static State handle_special_token(Tokenizer * tz);
 
-static void write_token(Token * token, TokenType type, char * text);
+static void write_token(Token * token, TokenType type, const char * text);
 
-static inline int is_quote(char c) { return (c == '\'' || c =='"'); }
-static inline int is_digit(char c) { return (c >= '0' && c <='9'); }
-static inline int is_space(char c) { return c_isspace((unsigned char) c); }
-static inline int is_nullc(char c) { return c == '\0'; }
-static int is_special_candidate(const char c) { for (int i = 0; i < _NUMB_SPECIAL_TOKENS; i++) { if (c == SPECIAL_TOKENS[i][0]) return 1; } return 0; }
+static inline int is_quote(const char c) { return (c == '\'' || c =='"'); }
+static inline int is_digit(const char c) { return (c >= '0' && c <='9'); }
+static inline int is_space(const char c) { return c_isspace((unsigned char) c); }
+static inline int is_nullc(const char c) { return c == '\0'; }
+static inline int is_special_candidate(const char c) { 
+    for (int i = 0; i < NUMB_SPECIAL_TOKENS; i++) { 
+        if (c == SPECIAL_TOKENS[i][0]) return 1; 
+    } 
+    return 0; 
+}
 
 /* -------------------------------------------------------------------------- */
 /*                            FUNCTION DEFINITIONS                            */
@@ -97,12 +119,14 @@ void create_tokens(Tokens * tokens, const char * input_buffer) {
 }
 
 void test_tokens(Tokens * t) {
+    printf("------TOKEN TEST------\n");
     printf("Number of Tokens: %d\n", num_tokens(t));
     int i;
     for (i = 0; i < num_tokens(t); i++) {
         Token * token = index_tokens(t, i);
         printf("Token: %s (%ld), type: %d\n", token->text, c_strlen(token->text), (int) token->type);
     }
+    printf("----------------------\n");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -116,9 +140,9 @@ static State handle_start_token(Tokenizer * tz) {
     while (is_space(PEEK)) ADVANCE;
     if (is_nullc(PEEK)) return STATE_EXIT;
 
+    // init the next available token
     Token * token = &(tokens->token_array[tokens->num_tokens]);
-    char * str_location = tokens->cstring_storage + (tz->w);
-
+    const char * str_location = tz->output + (tz->w); // set the next available string location
     write_token(token, TOKEN_WORD, str_location);
 
     if (is_quote(PEEK)) {
@@ -181,9 +205,9 @@ static State handle_special_token(Tokenizer * tz) {
     int token_size;
     validate_special_candidates(tz->input + tz->r, &token_type, &token_size); 
 
-    if (token_type != _TOKEN_INVALID) {
+    if (token_type != TOKEN_ERROR) {
         
-        //special case a|, clean up previous token
+        //special case a|, finish up previous token
         if (!(tz->at_start)) {
             WRITE('\0');
             tokens->num_tokens++;
@@ -202,7 +226,7 @@ static State handle_special_token(Tokenizer * tz) {
     return STATE_NORMAL_WRITE_TOKEN;
 }
 
-static void write_token(Token * token, TokenType type, char * text) {
+static void write_token(Token * token, TokenType type, const char * text) {
     token->type = type;
     token->text = text;
 }
