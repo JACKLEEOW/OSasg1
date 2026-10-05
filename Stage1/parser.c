@@ -9,6 +9,8 @@ void reset_pipeline(Pipeline * pipeline);
 ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
   reset_pipeline(pipeline);
 
+  if(tokens->num_tokens == 0) { return PAR_OK;}
+  
   if(new_command(pipeline) == PAR_ERROR){ return PAR_ERROR;}
   int i = 0; // Iterate over every token
   // For every token in tokens, loop through
@@ -59,6 +61,7 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
     }
     i++;
   }
+  pipeline->num_stages++;
   return PAR_OK;
 }
 

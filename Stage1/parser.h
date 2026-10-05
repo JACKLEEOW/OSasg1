@@ -21,8 +21,8 @@ typedef struct {
 } Pipeline;
 
 typedef enum {
+    PAR_OK,
     PAR_ERROR,
-    PAR_OK
 } ParseStatus;
 
 ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline);
