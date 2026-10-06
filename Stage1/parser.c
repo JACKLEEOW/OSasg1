@@ -61,7 +61,7 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
     }
     i++;
   }
-  pipeline->num_stages++;
+  // pipeline->num_stages++;
   return PAR_OK;
 }
 
