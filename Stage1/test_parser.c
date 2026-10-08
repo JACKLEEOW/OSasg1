@@ -4,50 +4,67 @@
 #include <string.h>
 #include "const.h"
 
-// ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline);
-// typedef struct {
-//     char * text;
-//     TokenType type;
-// } Token;
-
-// typedef struct {
-//     char cstring_storage[MAX_INPUT_SIZE + 1];
-//     Token token_array[MAX_INPUT_SIZE + 1];
-//     int num_tokens;
-// } Tokens;
-
 int is_pipelines_equal(Pipeline * p1, Pipeline * p2) {
     if (p1->num_stages != p2->num_stages) {
         printf("num_stages not equal: %d vs %d\n", p1->num_stages, p2->num_stages);
-        return 0;
+        return 1;
     }
     for (int i = 0; i < p1->num_stages; i++) {
         if (p1->stages[i].argc != p2->stages[i].argc) {
             printf("argc not equal at stage %d: %d vs %d\n", i, p1->stages[i].argc, p2->stages[i].argc);
-            return 0;
+            return 1;
         }
         for (int j = 0; j < p1->stages[i].argc; j++) {
             if (strcmp(p1->stages[i].argv[j], p2->stages[i].argv[j]) != 0) {
                 printf("argv not equal at stage %d, arg %d: %s vs %s\n", i, j, p1->stages[i].argv[j], p2->stages[i].argv[j]);
-                return 0;
+                return 1;
             }
         }
     }
-    return 1;
+    if (p1->background != p2->background) {
+        printf("background not equal: %d vs %d\n", p1->background, p2->background);
+        return 1;
+    }
+    if (p1->infile != p2->infile) {
+        printf("infile not equal: %s vs %s\n", p1->infile, p2->infile);
+        return 1;
+    }
+    if (p1->outfile != p2->outfile) {
+        printf("outfile not equal: %s vs %s\n", p1->outfile, p2->outfile);
+        return 1;
+    }
+    if (p1->append != p2->append) {
+        printf("append not equal: %d vs %d\n", p1->append, p2->append);
+        return 1;
+    }
+    
+    return 0;
 }
 
-int test_parser(Tokens * t, Pipeline * expected) {
+int test_parser(Tokens * t, Pipeline * expected, int is_fail_case) {;
     Pipeline p;
-    parse_tokens(t, &p);
-    // test_parse(&p);
-    if (expected == NULL) {
-        return PAR_OK;
-    }
-    if(is_pipelines_equal(&p, expected)){
-        return PAR_OK;
+    ParseStatus parse_status = parse_tokens(t, &p);
+
+    int is_fail_case_fail = 0;
+    if(is_fail_case && parse_status != PAR_OK) {
+        //char * status_str = (parse_status == PAR_ERROR) ? "PAR_ERROR" : "PAR_REDIRECT_ERROR";
+        //printf("Expected failure successfully: %s\n", status_str);
+    } else if(is_fail_case && parse_status == PAR_OK) {
+        printf("Expected failure but got success: %d\n", parse_status);
+        is_fail_case_fail = 1;
     }
 
-    return PAR_ERROR;
+    int failed = is_pipelines_equal(&p, expected);
+    if (failed || is_fail_case_fail) {
+        printf("Token input:\n");
+        test_tokens(t);
+        printf("Pipeline result:\n");
+        test_parse(&p);
+        //printf("Pipeline expected:\n");
+        //test_parse(expected);
+        return PAR_ERROR;
+    }
+    return PAR_OK;
 }
 
 int main() {
@@ -108,7 +125,19 @@ int main() {
     };
     for(int i = 0; i < MAX_INPUT_SIZE; i++){
         full_token.token_array[i] = tk_oneword;
-    }Tokens fullpipeline_token = {
+    }
+    Tokens multi_stage_token = {
+        .cstring_storage = {0},
+        .token_array = {
+            [0] = tk_oneword,
+            [1] = tk_pipe,
+            [2] = tk_oneword,
+            [3] = tk_pipe,
+            [4] = tk_oneword
+        },
+        .num_tokens = 5
+    };
+    Tokens fullpipeline_token = {
         .cstring_storage = {0},
         .token_array = {
             [0] = tk_oneword,
@@ -150,6 +179,17 @@ int main() {
         },
         .num_tokens = 4
     };
+    Tokens background_token = {
+        .cstring_storage = {0},
+        .token_array = {
+            [0] = tk_oneword,
+            [1] = {
+                .text = "&",
+                .type = TOKEN_BACKGROUND
+            }
+        },
+        .num_tokens = 2
+    };
 
     Pipeline expected_word = {
         .stages = {
@@ -158,7 +198,7 @@ int main() {
                 .argc = 1
             }
         },
-        .num_stages = 0,
+        .num_stages = 1,
         .background = 0,
         .infile = NULL,
         .outfile = NULL,
@@ -183,7 +223,7 @@ int main() {
                 .argc = 1
             }
         },
-        .num_stages = 1,
+        .num_stages = 2,
         .background = 0,
         .infile = NULL,
         .outfile = NULL,
@@ -196,7 +236,7 @@ int main() {
                 .argc = 1
             }
         },
-        .num_stages = 0,
+        .num_stages = 1,
         .background = 0,
         .infile = "Hello",
         .outfile = "Hello",
@@ -205,11 +245,11 @@ int main() {
     Pipeline expected_full = {
         .stages = {
             [0] = {
-                .argv = {"Hello", NULL},
+                .argv = {0},
                 .argc = MAX_ARGS
             },
         },
-        .num_stages = 0,
+        .num_stages = 1,
         .background = 0,
         .infile = NULL,
         .outfile = NULL,
@@ -218,7 +258,42 @@ int main() {
     for(int i = 0; i < MAX_ARGS; i++){
         expected_full.stages[0].argv[i] = "Hello";
     }
-    expected_full.stages[0].argv[MAX_ARGS+1] = NULL;
+    expected_full.stages[0].argv[MAX_ARGS] = NULL;
+
+    Pipeline expected_background = {
+        .stages = {
+            [0] = {
+                .argv = {"Hello", NULL},
+                .argc = 1
+            }
+        },
+        .num_stages = 1,
+        .background = 1,
+        .infile = NULL,
+        .outfile = NULL,
+        .append = 0
+    };
+    Pipeline expected_multi_stage = {
+        .stages = {
+            [0] = {
+                .argv = {"Hello", NULL},
+                .argc = 1
+            },
+            [1] = {
+                .argv = {"Hello", NULL},
+                .argc = 1
+            },
+            [2] = {
+                .argv = {"Hello", NULL},
+                .argc = 1
+            }
+        },
+        .num_stages = 3,
+        .background = 0,
+        .infile = NULL,
+        .outfile = NULL,
+        .append = 0
+    };
     Pipeline expected_fullpipeline = {
         .stages = {
             [0] = {
@@ -244,7 +319,7 @@ int main() {
                 .argc = 1
             }
         },
-        .num_stages = 0,
+        .num_stages = 1,
         .background = 0,
         .infile = NULL,
         .outfile = NULL,
@@ -257,7 +332,7 @@ int main() {
                 .argc = 1
             }
         },
-        .num_stages = 0,
+        .num_stages = 1,
         .background = 0,
         .infile = NULL,
         .outfile = NULL,
@@ -265,53 +340,51 @@ int main() {
     };
 
     int errors = 0;
-    if(test_parser(&empty_token, &expected_empty) == PAR_ERROR){
+    if(test_parser(&empty_token, &expected_empty, 0) == PAR_ERROR){
         printf("Empty test failed\n");
         errors++;
     }
-    if(test_parser(&hello_token, &expected_word) == PAR_ERROR){
+    if(test_parser(&hello_token, &expected_word, 0) == PAR_ERROR){
         printf("Single word test failed\n");
         errors++;
     }
-    if(test_parser(&pipe_token, &expected_pipe) == PAR_ERROR){
+    if(test_parser(&pipe_token, &expected_pipe, 0) == PAR_ERROR){
         printf("Pipe test failed\n");
         errors++;
     }
-    if(test_parser(&redirect_token, &expected_redirect) == PAR_ERROR){
+    if(test_parser(&redirect_token, &expected_redirect, 0) == PAR_ERROR){
         printf("Redirect test failed\n");
         errors++;
     }
-    if(test_parser(&full_token, &expected_full) == PAR_ERROR){
+    if(test_parser(&full_token, &expected_full, 0) == PAR_ERROR){
         printf("Full test failed\n");
         errors++;
     }
-    //printf("Testing full pipeline with %d stages\n", MAX_PIPELINE_STAGES);
-    //test_tokens(&fullpipeline_token);
-    //test_parse(&expected_fullpipeline);
+    if(test_parser(&multi_stage_token, &expected_multi_stage, 0) == PAR_ERROR){
+        printf("Multi-stage test failed\n");
+        errors++;
+    }
     // IDK why this test is failing.
-    if(test_parser(&fullpipeline_token, &expected_fullpipeline) == PAR_ERROR){
+    if(test_parser(&fullpipeline_token, &expected_fullpipeline, 0) == PAR_ERROR){
         printf("Full pipeline test failed\n"); 
         errors++;
     }
-    if(test_parser(&redirect_in_fail_token, &expected_redirect_in_fail) == PAR_ERROR){
+    if(test_parser(&redirect_in_fail_token, &expected_redirect_in_fail, 1) == PAR_ERROR){
         printf("Redirect fail test failed\n");
         errors++;
     }
-    if(test_parser(&redirect_out_fail_token1, &expected_redirect_out_fail) == PAR_ERROR){
+    if(test_parser(&redirect_out_fail_token1, &expected_redirect_out_fail, 1) == PAR_ERROR){
         printf("Redirect out fail test 1 failed\n");
         errors++;
-    }if(test_parser(&redirect_out_fail_token2, &expected_redirect_out_fail) == PAR_ERROR){
+    }if(test_parser(&redirect_out_fail_token2, &expected_redirect_out_fail, 1) == PAR_ERROR){
         printf("Redirect out fail test 2 failed\n");
+        errors++;
+    }
+    if(test_parser(&background_token, &expected_background, 0) == PAR_ERROR){
+        printf("Background test failed\n");
         errors++;
     }
     printf("Total errors: %d\n", errors);
 
-/*
-    Tokens t;
-    create_tokens(&t, "1 2 | > <<<<< 3");
-    Pipeline p;
-    printf("%d\n",parse_tokens(&t,&p));
-    create_tokens(&t, "hi");
-    printf("%d\n",parse_tokens(&t,&p));*/
     return 0;
 }

@@ -31,37 +31,42 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
         break;
       case TOKEN_REDIRECT_IN:
         // set infile as next token
-        if(i+1 >= tokens->num_tokens) { return PAR_ERROR;}
+        if(i+1 >= tokens->num_tokens) { return PAR_REDIRECT_ERROR;}
         i++;
         // next_token = tokens->token_array[i];
         next_token = index_tokens(tokens, i);
         if(next_token->type != TOKEN_WORD){
-          return PAR_ERROR;
+          pipeline->num_stages++;
+          return PAR_REDIRECT_ERROR;
         }
         pipeline->infile = next_token->text;
         break;
       case TOKEN_REDIRECT_OUT:
         // set outfile as next token
-        if(i+1 >= tokens->num_tokens) { return PAR_ERROR;}
+        if(i+1 >= tokens->num_tokens) { pipeline->num_stages++; return PAR_REDIRECT_ERROR;}
         i++;
         // next_token = tokens->token_array[i];
         next_token = index_tokens(tokens, i);
         if(next_token->type != TOKEN_WORD){
-          return PAR_ERROR;
+          pipeline->num_stages++;
+          return PAR_REDIRECT_ERROR;
         }
         pipeline->outfile = next_token->text;
+        break;
+        case TOKEN_BACKGROUND:
+        pipeline->background = 1;
         break;
 
       default:
         // add an argument in the command argv array
-        if(cur_command->argc > MAX_ARGS) { return PAR_ERROR;}
+        if(cur_command->argc > MAX_ARGS) { pipeline->num_stages++; return PAR_ERROR;}
         cur_command->argv[cur_command->argc] = cur_token.text;
         cur_command->argc++;
         break;
     }
     i++;
   }
-  // pipeline->num_stages++;
+  pipeline->num_stages++;
   return PAR_OK;
 }
 
@@ -88,30 +93,33 @@ Command *index_command(Pipeline * pipeline, int i) {
 }
 
 void reset_pipeline(Pipeline* pipeline){
-  //int i = 0;
   for(int i = 0; i < MAX_PIPELINE_STAGES; i++){
-    Command com = pipeline->stages[i];
-    com.argv[0] = NULL;
-    com.argc = 0;
+    Command c = pipeline->stages[i];
+    c.argv[0] = NULL;
+    c.argc = 0;
   }
   pipeline->num_stages = 0;
   pipeline->background = 0;
   pipeline->infile = NULL;
   pipeline->outfile = NULL;
+  pipeline->append = 0;
+  pipeline->background = 0;
 }
 
 
 void test_parse(Pipeline *pipeline){
-
-  printf("Number of Commands: %d\n", pipeline->num_stages + 1);
-    if(pipeline->infile) { printf("Infile: %s, \n", pipeline->infile);}
-    if(pipeline->outfile) { printf("Outfile: %s, \n", pipeline->outfile);}
+  printf("Pipeline test:\n");
+  printf("Number of Commands: %d\n", pipeline->num_stages);
+    if(pipeline->infile) { printf("Infile: %s, \n", pipeline->infile);} else { printf("Infile: NULL, \n");}
+    if(pipeline->outfile) { printf("Outfile: %s, \n", pipeline->outfile);} else { printf("Outfile: NULL, \n");}
+    printf("Append: %d, \n", pipeline->append);
+    printf("Background: %d, \n", pipeline->background);
   int i = 0;
   Command *c;
 
   // For number of command structs in the pipeline
   while(i <= pipeline->num_stages){
-    printf("Command array : \n");
+    printf("Command array: \n");
     c = index_command(pipeline, i);
     unsigned int j;
 
@@ -122,9 +130,8 @@ void test_parse(Pipeline *pipeline){
 
     // Print other values of the command
     printf("Argc: %d, \n", c->argc);
-    //rintf("Append: %d, \n", c->append);
 
     i++;
-    printf("\n");
+    //printf("\n");
   }
 }
