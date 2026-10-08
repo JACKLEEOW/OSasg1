@@ -118,7 +118,7 @@ void test_parse(Pipeline *pipeline){
   Command *c;
 
   // For number of command structs in the pipeline
-  while(i <= pipeline->num_stages){
+  while(i < pipeline->num_stages){
     printf("Command array: \n");
     c = index_command(pipeline, i);
     unsigned int j;
