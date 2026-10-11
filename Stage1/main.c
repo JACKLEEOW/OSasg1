@@ -5,6 +5,7 @@
 #include "const.h"
 #include "cstring.h"
 #include "tokens.h"
+#include "parser.h"
 
 const char CHAR_LIMIT_EXCEEDED[] =  RED "exceeded max character limit ("TO_STRING(MAX_INPUT_SIZE)")" RESET;
 const char DOLLAR_SIGN[] = GREEN "$ " RESET;
@@ -45,7 +46,10 @@ int main() {
             write(STDOUT_FILENO, input_buffer, str_size);
             write(STDOUT_FILENO, "\n", 1);
 
+            Pipeline p;
             test_tokens(&t);
+            parse_tokens(&t, &p);
+            test_parse(&p);        
         }
 
     }
