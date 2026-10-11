@@ -13,6 +13,7 @@
 
 #define RED   "\033[31m"
 #define GREEN "\033[32m"
+#define DARK_ORANGE "\033[38;2;255;118;0m"
 #define RESET "\033[0m"
 
 #endif
