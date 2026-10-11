@@ -8,6 +8,7 @@
 #include "parser.h"
 #include "executor.h"
 #include "env.h"
+#include "path.h"
 
 const char CHAR_LIMIT_EXCEEDED[] =  RED "exceeded max character limit ("TO_STRING(MAX_INPUT_SIZE)")" RESET;
 const char DOLLAR_SIGN[] = GREEN "$ " RESET;
@@ -17,10 +18,13 @@ void run_user_input(const char * input_buffer);
 void flush_input_buffer();
 
 int main() {
+    steal_and_impersonate_env();
     int exit_shell = 0;
     char input_buffer[MAX_INPUT_SIZE + 1] = {'\0'};
-    // int cache = 0;
+    // int cache = -1;
     // const char * path = get_env("PATH", &cache);
+    // put_env("PATH", "PATH=LOL", &cache);
+    // path = get_env("PATH", &cache);
     // printf("%s cache(%d)\n", path, cache);
     do {
         get_user_input(input_buffer);
@@ -32,7 +36,10 @@ int main() {
 
 void get_user_input(char * input_buffer) {
     do {
-
+        const char * wd = get_pwd();
+        write(STDOUT_FILENO, DARK_ORANGE, c_strlen(DARK_ORANGE));
+        write(STDOUT_FILENO, wd, c_strlen(wd));
+        write(STDOUT_FILENO, RESET, c_strlen(" "RESET));
         write(STDOUT_FILENO, DOLLAR_SIGN, c_strlen(DOLLAR_SIGN));
         ssize_t bytes_read = read(STDIN_FILENO, input_buffer, MAX_INPUT_SIZE + 1);
 
@@ -57,11 +64,11 @@ void run_user_input(const char * input_buffer) {
 
     create_tokens(&t, input_buffer);
     
-    test_tokens(&t);
+    //test_tokens(&t);
 
     int parse_status = parse_tokens(&t, &p);
-    
-    test_parse(&p, parse_status);
+    if (parse_status != PAR_OK) return;
+    //test_parse(&p, parse_status);
     
     execute_pipeline(&p);
 

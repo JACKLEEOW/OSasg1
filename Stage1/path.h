@@ -3,12 +3,37 @@
 
 #define MAX_PATH 512
 
-int set_cwd(const char * path);
+/**
+ * @brief
+ * @param path
+ * 
+ * @return
+ */
+int path_exists(const char * path);
 
-const char * get_cwd();
+/**
+ * @brief
+ * @param path
+ * 
+ * @return
+ */
+int change_cwd(const char * path);
 
+/**
+ * @brief
+ * @param filename
+ * @param argv
+ * @param envp
+ * 
+ * @return
+ */
 int execvpe(const char *filename, char *const argv[], char *const envp[]);
 
-int file_exists(const char * filepath);
+/**
+ * @brief
+ * 
+ * @return
+ */
+const char * get_pwd();
 
 #endif

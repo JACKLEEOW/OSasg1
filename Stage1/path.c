@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdio.h>
+
 #include "cstring.h"
 #include "env.h"
 #include "path.h"
@@ -10,50 +11,47 @@ static int pwd_env_cache = -1;
 
 static const char * DEFAULT_PATH = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games";
 
-int set_cwd(const char * path) {
-    size_t path_size = c_strlen(path);
-
-    if (path_size > MAX_PATH) return -1;
-    if (file_exists(path) == -1) return -1;
-
-
-    c_strcpy(pwd_buffer + 4, path);
-    put_env("PWD", pwd_buffer, &pwd_env_cache);
-
-    return 0;
+int path_exists(const char * path) {
+    return (access(path, F_OK) == 0) ? 0 : -1;
 }
 
-const char * get_cwd() {
-    return get_env("PWD", &pwd_env_cache);
+int change_cwd(const char * path) {
+    if (path == NULL) return -1; // Path invalid
+
+    char cwd_buffer[MAX_PATH + 1];
+
+    if (chdir(path) == -1) return -1; // Chdir failed
+    if (getcwd(cwd_buffer, MAX_PATH + 1) == NULL) return -1;  // Failed to copy cwd to buffer (buffer too small)
+
+    c_strcpy(pwd_buffer + 4, cwd_buffer);
+    if (put_env("PWD", pwd_buffer, &pwd_env_cache)) return -1; // Failed to save to the environment
+
+    return 0; // Success
 }
 
 int execvpe(const char *filename, char *const argv[], char *const envp[]) {
-    if (filename == NULL) {
-        return -1;
-    }
+    if (filename == NULL || filename[0] == '\0') return -1; // Invalid name
 
-    if (file_exists(filename) == 0) {
+    if (path_exists(filename) == 0) {
         execve(argv[0], argv, envp);
-        return -1;
+        return -1;  // Execve failed
     } 
 
     // TODO:
     // Caching
 
-    // Not defined on function stack
     static char filepath_buffer[MAX_PATH + 1];
-
     static int path_env_cache = -1;
+
     const char * paths = get_env("PATH", &path_env_cache);
     if (paths == NULL) {
-        // printf("PATH NOT FOUND\n");
         put_env("PATH", DEFAULT_PATH, &path_env_cache);
         paths = get_env("PATH", &path_env_cache);
+        if (paths == NULL) return -1; // setting PATH environment failed
     }
-
-    // printf("PATH=%s\n",paths);
     
     size_t filename_size = c_strlen(filename);
+
     // Check Paths (linear trial and error with no cache)
     int pi = 0;
     int pf = 0;
@@ -73,7 +71,7 @@ int execvpe(const char *filename, char *const argv[], char *const envp[]) {
         filepath_buffer[bf++] = '/';
         // Mid way error check
         size_t path_size = pf - pi;
-        if (path_size + filename_size > MAX_PATH) {
+        if (path_size + filename_size + 1 > MAX_PATH) {
             continue;
         }
 
@@ -83,20 +81,19 @@ int execvpe(const char *filename, char *const argv[], char *const envp[]) {
             fi++;
         }
         filepath_buffer[bf + fi] = '\0';
-        // printf("%s\n", filepath_buffer);
+
         // Check if this is the correct file path
-        if (file_exists(filepath_buffer) == 0) {
-            // printf("FOUND\n");
-            execve(filepath_buffer, argv, envp);
-            return -1;
+        if (path_exists(filepath_buffer) == 0) {
+            execve(filepath_buffer, argv, envp);  
+            return -1; // Execve failed
         } 
 
         pi = pf + 1;
     } 
 
-    return -1;
+    return -1; // Command wasn't found
 }
 
-int file_exists(const char * filepath) {
-    return (access(filepath, F_OK) == 0) ? 0 : -1;
+const char * get_pwd() {
+    return get_env("PWD", &pwd_env_cache);
 }

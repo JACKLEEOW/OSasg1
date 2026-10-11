@@ -1,44 +1,25 @@
+#include <stddef.h>
+
 #include "env.h"
 #include "cstring.h"
-#include <stddef.h>
-#include <stdio.h>
 
-// static char env_pool[MAX_POOL + 1];
 static const char * env_table[MAX_ENV_VARS + 1];
 static int env_count = 0;
 static int init = 0;
 
 void steal_and_impersonate_env() {
-    // int free_pool_offset = 0;
-    // int old_pool_offset = 0;
     int i;
+    
     for (i = 0; environ[i] != NULL || i > MAX_ENV_VARS; i++) {
         env_table[i] = environ[i];
         env_count++;
-        // old_pool_offset = free_pool_offset;
-        // const char * s = environ[i];
-        // int j = 0;
-        
-        // do {
-        //     env_pool[free_pool_offset++] = s[j];
-        // } while (s[j++] != '\0' && free_pool_offset != MAX_POOL);
-        
-        // env_pool[free_pool_offset++] = '\0';
-        // env_table[i] = old_pool_offset;
-        // env_table[i + 1] = NULL;
-        // if (free_pool_offset == MAX_POOL + 1) return;
     }
 
     env_table[i] = NULL;
-
     environ = env_table;
+
     init = 1;
 }
-
-// const char * get_env(const char * name) {
-//     int x;
-//     return get_env(name, x);
-// }
 
 static const char * env_helper(const char * name, int * return_cache, int i) {
 
