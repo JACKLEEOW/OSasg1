@@ -14,22 +14,18 @@ const char CHAR_LIMIT_EXCEEDED[] =  RED "exceeded max character limit ("TO_STRIN
 const char DOLLAR_SIGN[] = GREEN "$ " RESET;
 
 void get_user_input(char * input_buffer);
-void run_user_input(const char * input_buffer);
+ExecutorStatus run_user_input(const char * input_buffer);
 void flush_input_buffer();
 
 int main() {
     steal_and_impersonate_env();
-    int exit_shell = 0;
+    ExecutorStatus status = EXE_OK;
     char input_buffer[MAX_INPUT_SIZE + 1] = {'\0'};
-    // int cache = -1;
-    // const char * path = get_env("PATH", &cache);
-    // put_env("PATH", "PATH=LOL", &cache);
-    // path = get_env("PATH", &cache);
-    // printf("%s cache(%d)\n", path, cache);
+
     do {
         get_user_input(input_buffer);
-        run_user_input(input_buffer);
-    } while (!exit_shell);
+        status = run_user_input(input_buffer);
+    } while (status != EXE_EXIT);
 
     return 0;
 }
@@ -58,7 +54,7 @@ void get_user_input(char * input_buffer) {
     } while (1);
 }
 
-void run_user_input(const char * input_buffer) {
+ExecutorStatus run_user_input(const char * input_buffer) {
     Tokens t;
     Pipeline p;
 
@@ -67,10 +63,11 @@ void run_user_input(const char * input_buffer) {
     //test_tokens(&t);
 
     int parse_status = parse_tokens(&t, &p);
-    if (parse_status != PAR_OK) return;
+    if (parse_status != PAR_OK) return EXE_ERROR;
     //test_parse(&p, parse_status);
     
-    execute_pipeline(&p);
+    return execute_pipeline(&p);
+    
 
 }
 

@@ -6,12 +6,12 @@
 /**
  * @brief
  */
-extern const char ** environ;
+extern const char ** environ; // envp
 
 /**
  * @brief
  */
-void steal_and_impersonate_env();
+void steal_and_impersonate_env(); // basically init for env
 
 /**
  * @brief
@@ -19,7 +19,7 @@ void steal_and_impersonate_env();
  * @param cache
  * @return
  */
-const char * get_env(const char * name, int * cache);
+const char * get_env(const char * name, int * cache); // get_
 
 /**
  * @brief
