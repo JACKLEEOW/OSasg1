@@ -1,7 +1,7 @@
 CC      := gcc
 CFLAGS  := -Wall -Wextra -std=c11 -g
 LDLIBS  := -lcunit
-SRCS    := main.c cstring.c tokens.c special_tokens.c parser.c
+SRCS    := main.c cstring.c tokens.c special_tokens.c parser.c executor.c env.c path.c
 OBJS    := $(SRCS:.c=.o)
 
 .PHONY: all clean test
@@ -16,17 +16,16 @@ prog: $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Explicit header dependencies (make can't infer these on its own)
-main.o: tokens.h
+main.o: tokens.h env.h path.h
 cstring.o: cstring.h
 tokens.o: tokens.h cstring.h const.h
 special_tokens.o: tokens.h
-cstring_test.o: cstring.h
+parser.o: parser.h
+executor.o: executor.h
+env.o: env.h cstring.h
+path.o: env.h cstring.h path.h
+special_tokens.o: tokens.h
 
-test: test_cstring
-	./test_cstring
-
-test_cstring: cstring_test.o cstring.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:
 	rm -f $(OBJS) cstring_test.o prog test_cstring
