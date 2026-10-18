@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <errno.h>
 
 #include "env.h"
 #include "cstring.h"
@@ -7,7 +8,7 @@ static const char * env_table[MAX_ENV_VARS + 1];
 static int env_count = 0;
 static int init = 0;
 
-void steal_and_impersonate_env() {
+void init_env() {
     int i;
     
     for (i = 0; environ[i] != NULL || i > MAX_ENV_VARS; i++) {
@@ -21,10 +22,10 @@ void steal_and_impersonate_env() {
     init = 1;
 }
 
-static const char * env_helper(const char * name, int * return_cache, int i) {
+static const char * env_helper(const char * name, int * return_cache, size_t i) {
 
     const char * env_var = environ[i];
-    int j = 0;
+    size_t j = 0;
     while (name[j] == env_var[j]) j++;
     if (name[j] == '\0' && env_var[j] == '=') {
         *return_cache = i;
@@ -47,7 +48,7 @@ const char * get_env(const char * name, int * cache) {
     } 
 
     // try all O(N)
-    for (int i = 0; environ[i] != NULL; i++) {
+    for (size_t i = 0; environ[i] != NULL; i++) {
         result = env_helper(name, cache, i);
         if (result != NULL) return result;
     }
@@ -56,9 +57,18 @@ const char * get_env(const char * name, int * cache) {
     return NULL;
 }
 
-int put_env(const char * name, const char * buffer, int * cache) {
+int put_env(const char * buffer, int * cache) {
     if (init == 0) return -1;
-    if (buffer == NULL || cache == NULL) return -1;
+    if (buffer == NULL || cache == NULL) { errno = EINVAL; return -1; }
+
+    char name[MAX_PUT_NAME_SIZE + 1]; // Should really be dynamic
+    size_t name_length;
+    for (name_length = 0; buffer[name_length] != '='; name_length++) {
+        if (name_length > MAX_PUT_NAME_SIZE) { errno = EINVAL; return -1; }
+        if (buffer[name_length] == '\0') { errno = EINVAL; return -1; }
+        name[name_length] = buffer[name_length];
+    }
+    name[name_length] = '\0';
 
     const char * result;
 
@@ -72,7 +82,7 @@ int put_env(const char * name, const char * buffer, int * cache) {
     } 
 
     // try all O(N)
-    for (int i = 0; environ[i] != NULL; i++) {
+    for (size_t i = 0; environ[i] != NULL; i++) {
         result = env_helper(name, cache, i);
         if (result != NULL) {
             environ[*cache] = buffer;
@@ -85,8 +95,9 @@ int put_env(const char * name, const char * buffer, int * cache) {
         environ[env_count] = buffer;
         env_count++;
         environ[env_count] = NULL;
+        return 0;
     }
 
-
+    errno = ENOMEM;
     return -1;
 }
