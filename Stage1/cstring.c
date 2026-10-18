@@ -1,33 +1,6 @@
-#include "cstring.h"
-
 #include <stddef.h>
-// #include <stdio.h>
 
-// #include <ctype.h>
-
-// void print_hidden_string(const char *str) {
-//     for (int i = 0; str[i] != '\0'; i++) {
-//         unsigned char c = str[i];
-
-//         // Explicitly map common hidden whitespace characters
-//         switch (c) {
-//             case '\n': printf("\\n"); break;
-//             case '\t': printf("\\t"); break;
-//             case '\r': printf("\\r"); break;
-//             // case '\0': printf("\\0"); break; // In case of mid-buffer exploration
-//             default:
-//                 if (isprint(c)) {
-//                     // It's a standard, visible character
-//                     putchar(c);
-//                 } else {
-//                     // For any other hidden control characters, print their Hex code
-//                     printf("\\x%02X", c);
-//                 }
-//                 break;
-//         }
-//     }
-//     printf("\n");
-// }
+#include "cstring.h"
 
 size_t c_strlen(const char *s) {
     if (s == NULL) return 0;
@@ -57,13 +30,11 @@ size_t c_trim(char *s) {
 
     // Move to first non-whitespace character left to right
     while (s[left] && c_isspace((unsigned char)s[left])) {
-        // print_hidden_char(s[start]);
         left++;
     }
 
     // Move to first non-whitespace character right to left
     while (right >= left && c_isspace((unsigned char)s[right])) {
-        // print_hidden_char(s[end]);
         right--;
     }
 
@@ -76,14 +47,11 @@ size_t c_trim(char *s) {
     // Shift all elements, removeing whitespace
     int i;
     for (i = left; i <= right; i++) {
-        // printf("%c", s[i]);
         s[i - left] = s[i];
     }
 
     size_t length = (right - left + 1);
     s[length] = '\0'; // re-add null terminator at end
-    // printf("left %d, right %d, len(%ld) ->", left, right, length);
-    // print_hidden_string(s);
     return (length);
 }
 
@@ -114,4 +82,22 @@ char * c_strncpy(char * dest, const char * src, size_t n) {
         dest[i] = src[i];
     } while (src[i++] != '\0' || i);
     return dest;
+}
+
+char * c_strcat(char * dest, const char * src) {
+    char *ptr = dest;
+
+    while (*ptr != '\0') {
+        ptr++;
+    }
+
+    while (*src != '\0') {
+        *ptr = *src;
+        ptr++;
+        src++;
+    }
+
+    *ptr = '\0';
+
+    return src;
 }

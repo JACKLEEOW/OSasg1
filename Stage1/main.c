@@ -1,51 +1,40 @@
 #include <unistd.h>
-#include <stdio.h>
 #include <fcntl.h>
 
 #include "const.h"
 #include "cstring.h"
+#include "io.h"
 #include "tokens.h"
 #include "parser.h"
 #include "executor.h"
 #include "env.h"
 #include "path.h"
 
-const char CHAR_LIMIT_EXCEEDED[] =  RED "exceeded max character limit ("TO_STRING(MAX_INPUT_SIZE)")" RESET;
-const char DOLLAR_SIGN[] = GREEN "$ " RESET;
-
 void get_user_input(char * input_buffer);
 void run_user_input(const char * input_buffer);
 void flush_input_buffer();
 
 int main() {
-    steal_and_impersonate_env();
-    int exit_shell = 0;
+    init_env();
     char input_buffer[MAX_INPUT_SIZE + 1] = {'\0'};
-    // int cache = -1;
-    // const char * path = get_env("PATH", &cache);
-    // put_env("PATH", "PATH=LOL", &cache);
-    // path = get_env("PATH", &cache);
-    // printf("%s cache(%d)\n", path, cache);
+
     do {
         get_user_input(input_buffer);
         run_user_input(input_buffer);
-    } while (!exit_shell);
+    } while (1);
 
     return 0;
 }
 
 void get_user_input(char * input_buffer) {
     do {
-        const char * wd = get_pwd();
-        write(STDOUT_FILENO, DARK_ORANGE, c_strlen(DARK_ORANGE));
-        write(STDOUT_FILENO, wd, c_strlen(wd));
-        write(STDOUT_FILENO, RESET, c_strlen(" "RESET));
-        write(STDOUT_FILENO, DOLLAR_SIGN, c_strlen(DOLLAR_SIGN));
+        const char * wd = get_cwd();
+        WRITE_OUT(MYSH_START, DARK_ORANGE, wd, GREEN "$ " RESET);
+
         ssize_t bytes_read = read(STDIN_FILENO, input_buffer, MAX_INPUT_SIZE + 1);
 
         if (bytes_read > MAX_INPUT_SIZE) {
-            write(STDOUT_FILENO, CHAR_LIMIT_EXCEEDED, sizeof(CHAR_LIMIT_EXCEEDED) - 1);
-            write(STDOUT_FILENO, "\n", 1);
+            WRITE_ERR(ERROR_START " Exceeded max character limit ("TO_STRING(MAX_INPUT_SIZE)")\n");
             flush_input_buffer();
             continue;
         }
@@ -69,7 +58,6 @@ void run_user_input(const char * input_buffer) {
     int parse_status = parse_tokens(&t, &p);
     if (parse_status != PAR_OK) return;
     //test_parse(&p, parse_status);
-    
     execute_pipeline(&p);
 
 }
