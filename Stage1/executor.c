@@ -211,7 +211,7 @@ ExecutorStatus execute_pipeline(Pipeline *pipeline){
     if (started != pipeline->num_stages) {
         return EXE_ERROR;
     }
-    if (pipeline->background) { // for later
+    if (pipeline->background) {
         return EXE_OK;
     }
     ExecutorStatus result = wait_for_all(pids,started);
