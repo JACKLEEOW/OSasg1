@@ -11,9 +11,15 @@
 #define TO_STRING_HELPER(X) #X
 #define TO_STRING(X) TO_STRING_HELPER(X)
 
-#define RED   "\033[31m"
+#define BOLD "\033[1m"
+#define RED "\033[31m"
 #define GREEN "\033[32m"
+#define YELLOW "\033[33m"
 #define DARK_ORANGE "\033[38;2;255;118;0m"
 #define RESET "\033[0m"
+
+#define ERROR_START BOLD RED "ERROR MYSH >>" RESET
+#define WARNING_START BOLD YELLOW "WARNING MYSH >>" RESET
+#define MYSH_START BOLD GREEN "MYSH >>" RESET
 
 #endif

@@ -2,16 +2,17 @@
 #define ENV_H
 
 #define MAX_ENV_VARS 256
+#define MAX_PUT_NAME_SIZE 16
 
 /**
  * @brief
  */
-extern const char ** environ; // envp
+extern const char ** environ;
 
 /**
  * @brief
  */
-void steal_and_impersonate_env(); // basically init for env
+void init_env();
 
 /**
  * @brief
@@ -19,7 +20,7 @@ void steal_and_impersonate_env(); // basically init for env
  * @param cache
  * @return
  */
-const char * get_env(const char * name, int * cache); // get_
+const char * get_env(const char * name, int * cache);
 
 /**
  * @brief
@@ -29,6 +30,6 @@ const char * get_env(const char * name, int * cache); // get_
  * @param cache
  * @return
  */
-int put_env(const char * name, const char * buffer, int * cache);
+int put_env(const char * buffer, int * cache);
 
 #endif

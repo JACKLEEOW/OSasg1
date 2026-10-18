@@ -37,6 +37,6 @@ char * c_strcpy(char * dest, const char * src);
 
 char * c_strncpy(char * dest, const char * src, size_t n);
 
-// void print_hidden_string(const char *str);
+char * c_strcat(char * dest, const char * src);
 
 #endif

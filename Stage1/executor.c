@@ -1,4 +1,6 @@
 #include "executor.h"
+#include "builtin.h"
+#include "io.h"
 #include "const.h"
 #include "cstring.h"
 #include "parser.h"
@@ -8,77 +10,32 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-static void write_error (const char *message) {
-    if (message == NULL) {
-        return;
-    }
-    write(STDERR_FILENO, message, c_strlen(message));
-    write(STDERR_FILENO, "\n", 1);
-}
-
-static int home_env_cache = -1; // gonna default to home if input is cd
-
-static ExecutorStatus run_cd(const Command *command) {
-    const char *target = NULL;
-    if (command->argc == 1) {
-        target = get_env("HOME", &home_env_cache);
-        if (target == NULL) {
-            write_error("HOME not set");
-            return EXE_ERROR;
-        }
-    }
-    else if(command->argc == 2){
-        target = command->argv[1];
-    }
-    else{
-        write_error("too many arguments");
-        return EXE_ERROR;
-    }
-    int path_status = path_exists(target);
-
-    if (path_status!= 0) {
-        write_error("path does not exist");
-        return EXE_ERROR;
-    }
-
-    int cwd_status = change_cwd(target);
-    if (cwd_status != 0) {
-        write_error("change directory failed");
-        return EXE_ERROR;
-    }
-    return EXE_OK;
-}
-
-// returns 1 if the command's first word matches name, 0 otherwise (also 0 if empty)
-static int command_is(const Command *command, const char *name) {
-    if (command->argc == 0) {
-        return 0;
-    }
-    return c_strcmp(command->argv[0], name) == 0;
-}
-
 // returns 1 if the pipeline is a single exit or cd command, which must run in the shell itself
 static int is_builtin(const Pipeline *pipeline) {
-    if (pipeline->num_stages != 1) {
+    if (pipeline->num_stages != 1 || pipeline->stages[0].argv[0] == NULL) {
         return 0;
     }
-    const Command *command = &pipeline->stages[0];
-    return command_is(command, "exit") || command_is(command, "cd");
+    const char *name = pipeline->stages[0].argv[0];
+    return c_strcmp(name, "exit") == 0 || c_strcmp(name, "cd") == 0;
 }
 
 // runs exit or cd in the parent, call only after is_builtin returned 1
-static ExecutorStatus run_builtin(const Pipeline *pipeline) {
-    const Command *command = &pipeline->stages[0];
-    if (command_is(command, "exit")) {
-        return EXE_EXIT;
+static ExecutorStatus run_builtin(Pipeline *pipeline) {
+    Command *command = &pipeline->stages[0];
+    const char **argv = (const char **) command->argv;
+    int status;
+    if (c_strcmp(argv[0], "exit") == 0) {
+        status = exit_builtin(argv, command->argc);
+    } else {
+        status = cd_builtin(argv, command->argc);
     }
-    return run_cd(command);
+    return status == 0 ? EXE_OK : EXE_ERROR;
 }
 static int redirect_fd (int fd, int target_fd){
     int redirect_status = dup2(fd, target_fd);
     
     if (redirect_status == -1) {
-        write_error("redirect failed");
+        WRITE_ERR(ERROR_START " redirect failed\n");
         close(fd);
         return -1;
     }
@@ -89,7 +46,7 @@ static int redirect_fd (int fd, int target_fd){
 static int redirect_input(const char* path) {
     int fd = open(path,O_RDONLY);
     if (fd ==-1) {
-        write_error("cannot open input file");
+        WRITE_ERR(ERROR_START " cannot open input file\n");
         return -1;
     }
     return redirect_fd(fd,STDIN_FILENO);
@@ -106,51 +63,23 @@ static int redirect_output(const char* path, int append) {
     int fd = open(path,flags,0644);
 
     if (fd ==-1) {
-        write_error("cannot open output file");
+        WRITE_ERR(ERROR_START " cannot open output file\n");
         return -1;
     }
     return redirect_fd(fd, STDOUT_FILENO);
 }
 
-static int apply_redirects(const Pipeline *pipeline){
-    if (pipeline->infile != NULL) {
-        if (redirect_input(pipeline->infile) == -1) {
-            return -1;
-        }
-    } 
-    if (pipeline-> outfile != NULL) {
-        if (redirect_output(pipeline->outfile, pipeline->append) == -1)
-        return -1;
-    }
-    return 0;
-}
 // child only: replaces this process with the command, never returns
 static void exec_child(Command *command) {
     execvpe(command->argv[0], command->argv, (char * const *) environ);
-    write_error("command not found"); // only reached if execvpe failed
+    WRITE_ERR(ERROR_START " command not found\n"); // only reached if execvpe failed
     _exit(1);
-}
-
-// forks and runs the command in the child, returns the child's pid or -1 on failure
-static pid_t spawn_command(Command *command, const Pipeline *pipeline) {
-    pid_t pid = fork();
-    if (pid == -1) {
-        write_error("fork failed");
-        return -1;
-    }
-    if (pid == 0) {
-        if (apply_redirects(pipeline) == -1) {
-            _exit(1);
-        }
-        exec_child(command);
-    }
-    return pid;
 }
 
 // blocks until the child finishes, reports an error if the wait itself fails
 static ExecutorStatus wait_for_child(pid_t pid) {
     if (waitpid(pid, NULL, 0) == -1) {
-        write_error("process failed");
+        WRITE_ERR(ERROR_START " process failed\n");
         return EXE_ERROR;
     }
     return EXE_OK;
@@ -166,7 +95,7 @@ static void close_all_pipes (int pipes[][2], int count) {
 static int create_pipes(int pipes[][2],int count) {
     for (int i = 0; i < count; i++) {
         if (pipe(pipes[i]) == -1) {
-            write_error("pipe failed");
+            WRITE_ERR(ERROR_START " pipe failed\n");
             close_all_pipes(pipes,i);
             return -1;
         }
@@ -178,14 +107,14 @@ static int connect_stage_pipes(int pipes[][2], int stage_index, int num_stages) 
     // if not first stage stdin comes from prev pipe read
     if (stage_index > 0) {
         if (dup2(pipes[stage_index - 1][0], STDIN_FILENO) == -1) {
-            write_error("pipe redirect failed");
+            WRITE_ERR(ERROR_START " pipe redirect failed\n");
             return -1;
         }
     }
     // if not last, std out goes into this pipes write end
     if (stage_index < num_stages - 1) {
         if (dup2(pipes[stage_index][1], STDOUT_FILENO) == -1) {
-            write_error("pipe redirect failed");
+            WRITE_ERR(ERROR_START " pipe redirect failed\n");
             return -1;
         }
     }
@@ -224,7 +153,7 @@ static int setup_stage_io(const Pipeline *pipeline, int stage_index, int pipes[]
 static pid_t spawn_stage(Pipeline *pipeline, int stage_index, int pipes[][2]){
     pid_t pid = fork();
     if (pid == -1) {
-        write_error("fork failure");
+        WRITE_ERR(ERROR_START " fork failure\n");
         return -1;
     }
     if (pid == 0) {
@@ -258,7 +187,7 @@ static ExecutorStatus wait_for_all(pid_t pids[], int count) {
 }
 ExecutorStatus execute_pipeline(Pipeline *pipeline){
     if (pipeline->num_stages > MAX_PIPELINE_STAGES) {
-        write_error("too many commands in pipeline");
+        WRITE_ERR(ERROR_START " too many commands in pipeline\n");
         return EXE_ERROR;
     }
     int pipes[MAX_PIPELINE_STAGES -1][2];
