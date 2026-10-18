@@ -9,6 +9,8 @@
 #include "env.h"
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <errno.h>
+#include <string.h> // only for strerror
 
 // returns 1 if the pipeline is a single exit or cd command, which must run in the shell itself
 static int is_builtin(const Pipeline *pipeline) {
@@ -35,7 +37,7 @@ static int redirect_fd (int fd, int target_fd){
     int redirect_status = dup2(fd, target_fd);
     
     if (redirect_status == -1) {
-        WRITE_ERR(ERROR_START " redirect failed\n");
+        WRITE_ERR(ERROR_START " redirect: ", strerror(errno), "\n");
         close(fd);
         return -1;
     }
@@ -46,7 +48,7 @@ static int redirect_fd (int fd, int target_fd){
 static int redirect_input(const char* path) {
     int fd = open(path,O_RDONLY);
     if (fd ==-1) {
-        WRITE_ERR(ERROR_START " cannot open input file\n");
+        WRITE_ERR(ERROR_START " ", path, ": ", strerror(errno), "\n");
         return -1;
     }
     return redirect_fd(fd,STDIN_FILENO);
@@ -63,7 +65,7 @@ static int redirect_output(const char* path, int append) {
     int fd = open(path,flags,0644);
 
     if (fd ==-1) {
-        WRITE_ERR(ERROR_START " cannot open output file\n");
+        WRITE_ERR(ERROR_START " ", path, ": ", strerror(errno), "\n");
         return -1;
     }
     return redirect_fd(fd, STDOUT_FILENO);
@@ -72,14 +74,14 @@ static int redirect_output(const char* path, int append) {
 // child only: replaces this process with the command, never returns
 static void exec_child(Command *command) {
     execvpe(command->argv[0], command->argv, (char * const *) environ);
-    WRITE_ERR(ERROR_START " command not found\n"); // only reached if execvpe failed
+    WRITE_ERR(ERROR_START " ", command->argv[0], ": ", strerror(errno), "\n"); // only reached if execvpe failed
     _exit(1);
 }
 
 // blocks until the child finishes, reports an error if the wait itself fails
 static ExecutorStatus wait_for_child(pid_t pid) {
     if (waitpid(pid, NULL, 0) == -1) {
-        WRITE_ERR(ERROR_START " process failed\n");
+        WRITE_ERR(ERROR_START " wait: ", strerror(errno), "\n");
         return EXE_ERROR;
     }
     return EXE_OK;
@@ -95,7 +97,7 @@ static void close_all_pipes (int pipes[][2], int count) {
 static int create_pipes(int pipes[][2],int count) {
     for (int i = 0; i < count; i++) {
         if (pipe(pipes[i]) == -1) {
-            WRITE_ERR(ERROR_START " pipe failed\n");
+            WRITE_ERR(ERROR_START " pipe: ", strerror(errno), "\n");
             close_all_pipes(pipes,i);
             return -1;
         }
@@ -107,14 +109,14 @@ static int connect_stage_pipes(int pipes[][2], int stage_index, int num_stages) 
     // if not first stage stdin comes from prev pipe read
     if (stage_index > 0) {
         if (dup2(pipes[stage_index - 1][0], STDIN_FILENO) == -1) {
-            WRITE_ERR(ERROR_START " pipe redirect failed\n");
+            WRITE_ERR(ERROR_START " pipe redirect: ", strerror(errno), "\n");
             return -1;
         }
     }
     // if not last, std out goes into this pipes write end
     if (stage_index < num_stages - 1) {
         if (dup2(pipes[stage_index][1], STDOUT_FILENO) == -1) {
-            WRITE_ERR(ERROR_START " pipe redirect failed\n");
+            WRITE_ERR(ERROR_START " pipe redirect: ", strerror(errno), "\n");
             return -1;
         }
     }
@@ -153,7 +155,7 @@ static int setup_stage_io(const Pipeline *pipeline, int stage_index, int pipes[]
 static pid_t spawn_stage(Pipeline *pipeline, int stage_index, int pipes[][2]){
     pid_t pid = fork();
     if (pid == -1) {
-        WRITE_ERR(ERROR_START " fork failure\n");
+        WRITE_ERR(ERROR_START " fork: ", strerror(errno), "\n");
         return -1;
     }
     if (pid == 0) {
