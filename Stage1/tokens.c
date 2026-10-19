@@ -118,16 +118,6 @@ void create_tokens(Tokens * tokens, const char * input_buffer) {
     return;
 }
 
-void test_tokens(Tokens * t) {
-    printf("------TOKEN TEST------\n");
-    printf("Number of Tokens: %d\n", num_tokens(t));
-    int i;
-    for (i = 0; i < num_tokens(t); i++) {
-        Token * token = index_tokens(t, i);
-        printf("Token: %s (%ld), type: %d\n", token->text, c_strlen(token->text), (int) token->type);
-    }
-    printf("----------------------\n");
-}
 
 /* -------------------------------------------------------------------------- */
 /*                         HELPER FUNCTION DEFINITIONS                        */

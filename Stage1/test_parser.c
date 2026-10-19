@@ -1,10 +1,40 @@
 #include "parser.h"
 #include <stdio.h>
 #include "tokens.h"
+//#include "test_token.h"
 #include <string.h>
 #include "const.h"
 #include "test_parser.h"
 
+
+void test_parse(Pipeline *pipeline){
+  printf("Pipeline test:\n");
+  printf("Number of Commands: %d\n", pipeline->num_stages);
+    if(pipeline->infile) { printf("Infile: %s, \n", pipeline->infile);} else { printf("Infile: NULL, \n");}
+    if(pipeline->outfile) { printf("Outfile: %s, \n", pipeline->outfile);} else { printf("Outfile: NULL, \n");}
+    printf("Append: %d, \n", pipeline->append);
+    printf("Background: %d, \n", pipeline->background);
+  int i = 0;
+  Command *c;
+
+  // For number of command structs in the pipeline
+  while(i < pipeline->num_stages){
+    printf("Command array: \n");
+    c = index_command(pipeline, i);
+    unsigned int j;
+
+    // For number of arguments in the command
+    for (j = 0; j < c->argc; j++){
+      printf("'%s', \n",c->argv[j]);
+    }
+
+    // Print other values of the command
+    printf("Argc: %d, \n", c->argc);
+
+    i++;
+    //printf("\n");
+  }
+}
 
 int is_pipelines_equal(Pipeline * p1, Pipeline * p2) {
     if (p1->num_stages != p2->num_stages) {
@@ -58,8 +88,8 @@ int test_parser(Tokens * t, Pipeline * expected, int is_fail_case) {;
 
     int failed = is_pipelines_equal(&p, expected);
     if (failed || is_fail_case_fail) {
-        printf("Token input:\n");
-        test_tokens(t);
+        //printf("Token input:\n");
+        // test_tokens(t);
         printf("Pipeline result:\n");
         test_parse(&p);
         //printf("Pipeline expected:\n");
@@ -96,14 +126,18 @@ int main() {
         printf("Multi-stage test failed\n");
         errors++;
     }
+    printf("Testing redirect fail case: '< |'\n");
     if(test_parser(&redirect_in_fail_token, &expected_redirect_in_fail, 1) == PAR_ERROR){
         printf("Redirect fail test failed\n");
         errors++;
     }
+    printf("Testing redirect out fail case: '>'\n");
     if(test_parser(&redirect_out_fail_token1, &expected_redirect_out_fail, 1) == PAR_ERROR){
         printf("Redirect out fail test 1 failed\n");
         errors++;
-    }if(test_parser(&redirect_out_fail_token2, &expected_redirect_out_fail, 1) == PAR_ERROR){
+    }
+    printf("Testing redirect out fail case: '> >'\n");
+    if(test_parser(&redirect_out_fail_token2, &expected_redirect_out_fail, 1) == PAR_ERROR){
         printf("Redirect out fail test 2 failed\n");
         errors++;
     }
@@ -111,7 +145,11 @@ int main() {
         printf("Background test failed\n");
         errors++;
     }
-    // IDK why this test is failing.
+    //printf("Testing background fail case: 'Hello & Hello'\n");
+    if(test_parser(&background_token_fail, &expected_background, 0) == PAR_ERROR){
+        printf("Background fail test failed\n");
+        errors++;
+    }
     //if(test_parser(&fullpipeline_token, &expected_fullpipeline, 0) == PAR_ERROR){
     //    printf("Full pipeline test failed\n"); 
     //    errors++;

@@ -47,7 +47,6 @@ int num_tokens(Tokens * t);
 
 void create_tokens(Tokens * tokens, const char * input_buffer);
 
-void test_tokens(Tokens * t);
 
 /**
  * @brief sets the global candidates

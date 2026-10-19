@@ -4,6 +4,8 @@
 #include "const.h"
 #include "parser.h"
 
+void test_parse(Pipeline * pipeline);
+
 #define tk_oneword {.text = "Hello", .type = TOKEN_WORD}
 #define tk_pipe {.text = "|", .type = TOKEN_PIPE}
 #define tk_redirect_in {.text = "<", .type = TOKEN_REDIRECT_IN}
@@ -102,6 +104,15 @@ Tokens background_token = {
     },
     .num_tokens = 2
 };
+Tokens background_token_fail = {
+    .cstring_storage = {0},
+    .token_array = {
+        [0] = tk_oneword,
+        [1] = tk_background,
+        [0] = tk_oneword,
+    },
+    .num_tokens = 2
+};
 
 Pipeline expected_word = {
     .stages = {
@@ -180,6 +191,8 @@ Pipeline expected_background = {
     .outfile = NULL,
     .append = 0
 };
+
+
 Pipeline expected_multi_stage = {
     .stages = {
         [0] = {

@@ -5,6 +5,17 @@
 #include "cstring.h"
 #include "test_token.h"
 
+void test_tokens(Tokens * t) {
+    printf("------TOKEN TEST------\n");
+    printf("Number of Tokens: %d\n", num_tokens(t));
+    int i;
+    for (i = 0; i < num_tokens(t); i++) {
+        Token * token = index_tokens(t, i);
+        printf("Token: %s (%ld), type: %d\n", token->text, c_strlen(token->text), (int) token->type);
+    }
+    printf("----------------------\n");
+}
+
 int is_tokens_equal(Tokens *t1, Tokens *t2) {
     if (t1->num_tokens != t2->num_tokens) {
         printf("Number of tokens not equal: %d vs %d\n", t1->num_tokens, t2->num_tokens);
@@ -93,7 +104,7 @@ int main() {
         printf("Test redirect out failed\n");
         errors++;
     }
-    char * redirect_out_append_input = "Hello >>> Hello ";
+    char * redirect_out_append_input = "Hello >> Hello ";
     if(test_tokenizar(redirect_out_append_input, &expected_redirect_out_append_token)) {
         printf("Test redirect out append failed\n");
         errors++;
@@ -105,7 +116,7 @@ int main() {
         errors++;
     }
 
-    char * special_combo_input = "   Hello   <   Hello   >   Hello   >>>   Hello   &   | | Hello<<Hello>>>Hello&Hello|Hello   ";
+    char * special_combo_input = "   Hello   <   Hello   >   Hello   >>   Hello   &   | | Hello<<Hello>>>Hello&Hello|Hello   ";
     if(test_tokenizar(special_combo_input, &expected_special_combo_token)) {
         printf("Test special combo failed\n");
         errors++;

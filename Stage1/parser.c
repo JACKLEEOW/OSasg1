@@ -1,6 +1,7 @@
 #include "parser.h"
 #include <stddef.h>
-#include <stdio.h>
+#include "io.h"
+// #include <stdio.h>
 
 ParseStatus new_command(Pipeline * pipeline);
 void append_null(Command *c);
@@ -23,43 +24,72 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
     switch (cur_token.type) {
       case TOKEN_PIPE:
         // Next command in pipeline
+        if(cur_command->argc == 0) {
+          WRITE_ERR(ERROR_START " Syntax error: No word before '|' \n");
+          return PAR_ERROR;
+        }
         pipeline->num_stages++;
         if(new_command(pipeline) == PAR_ERROR) { 
           pipeline->num_stages--;
           return PAR_ERROR;
         }
+        if(i+1 >= tokens->num_tokens) { 
+          WRITE_ERR(ERROR_START " Syntax error: No word after '|' \n");
+          pipeline->num_stages++;
+          return PAR_ERROR;
+        }
         break;
       case TOKEN_REDIRECT_IN:
         // set infile as next token
-        if(i+1 >= tokens->num_tokens) { return PAR_REDIRECT_ERROR;}
+        if(i+1 >= tokens->num_tokens) { 
+          WRITE_ERR(ERROR_START " Syntax error: '<' missing argument\n");
+          return PAR_REDIRECT_ERROR;
+        }
         i++;
         // next_token = tokens->token_array[i];
         next_token = index_tokens(tokens, i);
         if(next_token->type != TOKEN_WORD){
           pipeline->num_stages++;
+          WRITE_ERR(ERROR_START " Syntax error: unexpected token '", next_token->text, "'\n");
           return PAR_REDIRECT_ERROR;
         }
         pipeline->infile = next_token->text;
         break;
       case TOKEN_REDIRECT_OUT:
         // set outfile as next token
-        if(i+1 >= tokens->num_tokens) { pipeline->num_stages++; return PAR_REDIRECT_ERROR;}
+        if(i+1 >= tokens->num_tokens) { pipeline->num_stages++; 
+          WRITE_ERR(ERROR_START " Syntax error: '>' missing argument\n");
+          return PAR_REDIRECT_ERROR;
+        }
         i++;
         // next_token = tokens->token_array[i];
         next_token = index_tokens(tokens, i);
         if(next_token->type != TOKEN_WORD){
           pipeline->num_stages++;
+          WRITE_ERR(ERROR_START " Syntax error: '>' missing argument\n");
           return PAR_REDIRECT_ERROR;
         }
         pipeline->outfile = next_token->text;
         break;
         case TOKEN_BACKGROUND:
-        pipeline->background = 1;
-        break;
+          if(cur_command->argc == 0) {
+            //WRITE_ERR(ERROR_START " Syntax error: No word before '&' \n");
+            //return PAR_ERROR;
+          }
+          pipeline->background = 1;
+          next_token = index_tokens(tokens, i);
+          if(next_token != NULL) {
+            //WRITE_ERR(ERROR_START " Syntax error: Invalid '&' placement\n");
+            //return PAR_ERROR;
+          }
+          break;
 
       default:
         // add an argument in the command argv array
-        if(cur_command->argc > MAX_ARGS) { pipeline->num_stages++; return PAR_ERROR;}
+        if(cur_command->argc > MAX_ARGS) { 
+          pipeline->num_stages++;
+          WRITE_ERR(ERROR_START " Command reached max number of arguments ("TO_STRING(MAX_ARGS)")\n"); 
+          return PAR_ERROR;}
         cur_command->argv[cur_command->argc] = cur_token.text;
         cur_command->argc++;
         break;
@@ -72,6 +102,7 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
 
 ParseStatus new_command(Pipeline * pipeline){
   if(pipeline->num_stages > MAX_PIPELINE_STAGES){
+    WRITE_ERR(ERROR_START " Syntax error: Max pipeline limit reached ("TO_STRING(MAX_PIPELINE_STAGES)")\n");
     return PAR_ERROR;
   }
   Command * command = &(pipeline->stages[pipeline->num_stages]);
@@ -104,34 +135,4 @@ void reset_pipeline(Pipeline* pipeline){
   pipeline->outfile = NULL;
   pipeline->append = 0;
   pipeline->background = 0;
-}
-
-
-void test_parse(Pipeline *pipeline){
-  printf("Pipeline test:\n");
-  printf("Number of Commands: %d\n", pipeline->num_stages);
-    if(pipeline->infile) { printf("Infile: %s, \n", pipeline->infile);} else { printf("Infile: NULL, \n");}
-    if(pipeline->outfile) { printf("Outfile: %s, \n", pipeline->outfile);} else { printf("Outfile: NULL, \n");}
-    printf("Append: %d, \n", pipeline->append);
-    printf("Background: %d, \n", pipeline->background);
-  int i = 0;
-  Command *c;
-
-  // For number of command structs in the pipeline
-  while(i < pipeline->num_stages){
-    printf("Command array: \n");
-    c = index_command(pipeline, i);
-    unsigned int j;
-
-    // For number of arguments in the command
-    for (j = 0; j < c->argc; j++){
-      printf("'%s', \n",c->argv[j]);
-    }
-
-    // Print other values of the command
-    printf("Argc: %d, \n", c->argc);
-
-    i++;
-    //printf("\n");
-  }
 }
