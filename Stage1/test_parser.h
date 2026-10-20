@@ -100,18 +100,19 @@ Tokens background_token = {
     .cstring_storage = {0},
     .token_array = {
         [0] = tk_oneword,
-        [1] = tk_background
+        [1] = tk_oneword,
+        [2] = tk_background
     },
-    .num_tokens = 2
+    .num_tokens = 3
 };
 Tokens background_token_fail = {
     .cstring_storage = {0},
     .token_array = {
         [0] = tk_oneword,
         [1] = tk_background,
-        [0] = tk_oneword,
+        [2] = tk_oneword,
     },
-    .num_tokens = 2
+    .num_tokens = 3
 };
 
 Pipeline expected_word = {
@@ -181,8 +182,8 @@ Pipeline expected_full = {
 Pipeline expected_background = {
     .stages = {
         [0] = {
-    .argv = {"Hello", NULL},
-        .argc = 1
+    .argv = {"Hello", "Hello", NULL},
+        .argc = 2
     }
     },
     .num_stages = 1,

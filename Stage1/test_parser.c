@@ -145,7 +145,7 @@ int main() {
         printf("Background test failed\n");
         errors++;
     }
-    //printf("Testing background fail case: 'Hello & Hello'\n");
+    printf("Testing background fail case: 'Hello & Hello'\n");
     if(test_parser(&background_token_fail, &expected_background, 0) == PAR_ERROR){
         printf("Background fail test failed\n");
         errors++;

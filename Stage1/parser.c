@@ -73,13 +73,13 @@ ParseStatus parse_tokens(Tokens *tokens, Pipeline *pipeline){
         break;
         case TOKEN_BACKGROUND:
           if(cur_command->argc == 0) {
-            //WRITE_ERR(ERROR_START " Syntax error: No word before '&' \n");
+            WRITE_ERR(ERROR_START " Syntax error: No word before '&' \n");
             //return PAR_ERROR;
           }
           pipeline->background = 1;
-          next_token = index_tokens(tokens, i);
+          next_token = index_tokens(tokens, i+1);
           if(next_token != NULL) {
-            //WRITE_ERR(ERROR_START " Syntax error: Invalid '&' placement\n");
+            WRITE_ERR(ERROR_START " Syntax error: Invalid '&' placement\n");
             //return PAR_ERROR;
           }
           break;
