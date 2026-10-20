@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+/* --------------------------------- MACROS --------------------------------- */
+
 #define WRITE_OUT(...) \
     write_out((const char *[]){ __VA_ARGS__ }, \
               sizeof((const char *[]){ __VA_ARGS__ }) / sizeof(const char *))
@@ -10,6 +12,8 @@
 #define WRITE_ERR(...) \
     write_error((const char *[]){ __VA_ARGS__ }, \
               sizeof((const char *[]){ __VA_ARGS__ }) / sizeof(const char *))
+
+/* --------------------------- FUNCTION PROTOTYPES -------------------------- */
 
 /**
  * @brief Writes one or more messages to STDERR.
@@ -19,7 +23,7 @@
  * are handled internally, and errno is preserved across the call.
  *
  * @param messages Array of null-terminated strings. NULL entries are skipped.
- * @param count    Number of entries in @p messages.
+ * @param count Number of entries in messages.
  *
  * @return 0 on success, -1 if a write failed (errno is NOT modified).
  *
@@ -53,7 +57,7 @@ int write_error(const char *const messages[], size_t count);
  * are handled internally, and errno is preserved across the call.
  *
  * @param messages Array of null-terminated strings. NULL entries are skipped.
- * @param count    Number of entries in @p messages.
+ * @param count Number of entries in messages.
  *
  * @return 0 on success, -1 if a write failed (errno is NOT modified).
  *

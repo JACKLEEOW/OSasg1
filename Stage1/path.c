@@ -1,11 +1,11 @@
 #include <unistd.h>
-// #include <sys/types.h>
 #include <errno.h>
-// #include <stdio.h>
 
 #include "cstring.h"
 #include "env.h"
 #include "path.h"
+
+/* --------------------------------- GLOBALS -------------------------------- */
 
 static const char * DEFAULT_PATH = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games";
 
@@ -14,7 +14,8 @@ static int oldpwd_env_cache = -1;
 static int home_env_cache = -1;
 static int path_env_cache = -1;
 
-// Helper function defs
+/* --------------------------- FUNCTION DEFINITONS -------------------------- */
+
 const char * cat_home(const char * path, char * buffer, size_t size) {
     const char * home = get_home();
 
@@ -28,6 +29,7 @@ const char * cat_home(const char * path, char * buffer, size_t size) {
 }
 
 int path_exists(const char * path) {
+    // Not the most ideal function
     return (access(path, F_OK) == 0) ? 0 : -1;
 }
 
@@ -135,7 +137,7 @@ int execvpe(const char *filename, char *const argv[], char *const envp[]) {
             continue;
         }
 
-        // cat filename
+        // Cat filename
         while (filename[fi] != '\0') {
             filepath_buffer[bf + fi] = filename[fi];
             fi++;

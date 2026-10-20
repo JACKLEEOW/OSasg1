@@ -2,11 +2,77 @@
 #include <errno.h>
 #include <string.h>
 #include <stddef.h>
+#include <signal.h>
 
 #include "builtin.h"
 #include "io.h"
 #include "const.h"
 #include "path.h"
+#include "job_control.h"
+#include "cstring.h"
+
+// int fg_builtin(const char * argv[], int argc) {
+//     if (argc > 2) {
+//         WRITE_ERR(ERROR_START " exit: Too many arguments \n");
+//         return -1;
+//     }
+
+//     if (argc == 1) {
+//         Job *job = focused_job();
+//         tcsetpgrp(STDIN_FILENO, job->pgid);
+
+        
+//         _exit(0);
+//     } 
+
+//     WRITE_ERR(MYSH_START " exited with status '", argv[1], "'\n");
+//     _exit(1);
+//     return -1;
+// }
+
+/* --------------------------- FUNCTION DEFINITONS -------------------------- */
+
+int kill_builtin(const char * argv[], int argc) {
+    if (argc > 2) {
+        WRITE_ERR(ERROR_START " kill: Too many arguments \n");
+        return -1;
+    }
+
+    Job *job;
+    if (argc == 1) {
+        job = focused_job();
+    } else {
+        unsigned int id = cstr_to_uint(argv[1]);
+        char buffer[3];
+        const char *id_text = uint_to_cstr(buffer, 3, id);
+        WRITE_OUT(MYSH_START " kill: Using id=", id_text, "\n");
+        job = get_job((int)id);
+    }
+
+    if (job == NULL) {
+        WRITE_ERR(ERROR_START " kill: Job not found \n");
+        return -1;
+    }
+
+        kill(-job->pgid, SIGKILL);
+        int status;
+        pid_t w;
+    // Wait for job to die
+    while ((w = waitpid(-job->pgid, &status, 0)) > 0) update_job_status(job, status);
+    return 0;
+}
+
+int jobs_builtin(const char * argv[], int argc) {
+    (void)argv;
+    if (argc > 1) {
+        WRITE_ERR(ERROR_START " jobs: Too many arguments \n");
+        return -1;
+    }
+
+    display_jobs();
+
+    return 0;
+}
 
 int exit_builtin(const char * argv[], int argc) {
     if (argc > 2) {
@@ -18,8 +84,11 @@ int exit_builtin(const char * argv[], int argc) {
         _exit(0);
     } 
 
-    WRITE_ERR(MYSH_START " exited with status '", argv[1], "'\n");
-    _exit(1);
+    unsigned int status = cstr_to_uint(argv[1]);
+    char buffer[3];
+    const char *id_text = uint_to_cstr(buffer, 3, status);
+    WRITE_ERR(MYSH_START " exited with status '", id_text, "'\n");
+    _exit(status);
     return -1;
 }
 

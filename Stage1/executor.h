@@ -5,8 +5,7 @@
 
 typedef enum {
     EXE_ERROR,
-    EXE_OK,
-    EXE_EXIT
+    EXE_OK
 } ExecutorStatus;
 
 ExecutorStatus execute_pipeline(Pipeline * pipeline);

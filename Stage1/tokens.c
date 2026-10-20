@@ -1,17 +1,17 @@
+#include <stddef.h>
+
 #include "tokens.h"
 #include "const.h"
 #include "cstring.h"
-#include <stddef.h>
-#include <stdio.h>
 
-/* -------------------------------------------------------------------------- */
-/*                      CONSTANTS, ENUMS, HELPER HEADERS                      */
-/* -------------------------------------------------------------------------- */
+/* --------------------------------- MACROS --------------------------------- */
 
 #define PEEK        (tz->input[tz->r])
 #define ADVANCE     (tz->r++)
 #define CONSUME     (tz->input[tz->r++])
 #define WRITE(c)    (tz->output[tz->w++] = (c))
+
+/* ----------------- STATE MACHINE ENUM, STRUCT, PROTOTYPES ----------------- */
 
 typedef enum {
     STATE_START_TOKEN,
@@ -22,61 +22,64 @@ typedef enum {
 } State;
 
 typedef struct {
-    int r;              // read head
-    int w;              // write head
-    const char * input; // read from
-    char * output;      // write to
-    Tokens * tokens;    // token container
-    char quote;          
-    int at_start;       // used to for a specific condition found in special token
+    size_t r;               // Read index
+    size_t w;               // Write index
+    const char * input;     // Source string
+    char * output;          // Destination buffer
+    Tokens * tokens;        // Tokens struct
+    char quote;             // Current opening quote char
+    int at_start;           // Special token condition flag
 } Tokenizer;
 
-/**
- * @brief finds the first none whitespace character, init the next token
- */
+/** @brief Skips whitespace and starts a new word token at the write position. */
 static State handle_start_token(Tokenizer * tz);
 
-/**
- * @brief writes all following non-whitespace, non-terminating, non-special characters, handles closing the current token
- */
+/** @brief Copies an unquoted token, handing off to the quote or special token states when one is hit. */
 static State handle_normal_write_token(Tokenizer * tz);
 
-/**
- * @brief writes all following character up to the next matching quote
- */
+/** @brief Copies a quoted section verbatim until the matching closing quote. */
 static State handle_quote_write_token(Tokenizer * tz);
 
-/**
- * @brief attempts to init a new token based on the tokens defined in special_tokens.c,
- * either fills the token out with the special token, or just write the current char as 
- * it wasn't a token
- */
+/** @brief Emits a special token if one starts here, otherwise writes the char as normal text. */
 static State handle_special_token(Tokenizer * tz);
 
-static void write_token(Token * token, TokenType type, const char * text);
+/* ---------------------------- HELPER FUNCTIONS ---------------------------- */
 
-static inline int is_quote(const char c) { return (c == '\'' || c =='"'); }
-static inline int is_digit(const char c) { return (c >= '0' && c <='9'); }
-static inline int is_space(const char c) { return c_isspace((unsigned char) c); }
-static inline int is_nullc(const char c) { return c == '\0'; }
-static inline int is_special_candidate(const char c) { 
-    for (int i = 0; i < NUMB_SPECIAL_TOKENS; i++) { 
-        if (c == SPECIAL_TOKENS[i][0]) return 1; 
-    } 
-    return 0; 
+static inline int is_quote(const char c) { 
+    return (c == '\'' || c == '"'); 
 }
 
-/* -------------------------------------------------------------------------- */
-/*                            FUNCTION DEFINITIONS                            */
-/* -------------------------------------------------------------------------- */
-
-Token * index_tokens(Tokens * t, int i) {
-    if (i < 0 || i >= t->num_tokens) return NULL;
-    return &(t->token_array[i]);
+static inline int is_digit(const char c) { 
+    return (c >= '0' && c <= '9'); 
 }
 
-int num_tokens(Tokens * t) {
-    return t->num_tokens;
+static inline int is_space(const char c) { 
+    return c_isspace((unsigned char) c); 
+}
+
+static inline int is_nullc(const char c) { 
+    return c == '\0'; 
+}
+
+static inline int is_special_candidate(const char c) {
+    for (int i = 0; i < NUMB_SPECIAL_TOKENS; i++) if (c == SPECIAL_TOKENS[i][0]) return 1;
+    return 0;
+}
+
+static void write_token(Token * token, TokenType type, const char * text) {
+    token->type = type;
+    token->text = text;
+}
+
+/* -------------------------- FUNCTION DEFINITIONS -------------------------- */
+
+Token * index_tokens(Tokens * tokens, int index) {
+    if (index < 0 || index >= tokens->num_tokens) return NULL;
+    return &(tokens->token_array[index]);
+}
+
+int num_tokens(Tokens * tokens) {
+    return tokens->num_tokens;
 }
 
 void create_tokens(Tokens * tokens, const char * input_buffer) {
@@ -118,31 +121,18 @@ void create_tokens(Tokens * tokens, const char * input_buffer) {
     return;
 }
 
-void test_tokens(Tokens * t) {
-    printf("------TOKEN TEST------\n");
-    printf("Number of Tokens: %d\n", num_tokens(t));
-    int i;
-    for (i = 0; i < num_tokens(t); i++) {
-        Token * token = index_tokens(t, i);
-        printf("Token: %s (%ld), type: %d\n", token->text, c_strlen(token->text), (int) token->type);
-    }
-    printf("----------------------\n");
-}
-
-/* -------------------------------------------------------------------------- */
-/*                         HELPER FUNCTION DEFINITIONS                        */
-/* -------------------------------------------------------------------------- */
+/* ------------------- STATE MACHINE FUNCTION DEFINITIONS ------------------- */
 
 static State handle_start_token(Tokenizer * tz) {
     Tokens * tokens = tz->tokens;
 
-    // move to the right until non-ws character (Beginning of the token)
+    // Move to the right until non-ws character (Beginning of the token)
     while (is_space(PEEK)) ADVANCE;
     if (is_nullc(PEEK)) return STATE_EXIT;
 
-    // init the next available token
+    // Init the next available token
     Token * token = &(tokens->token_array[tokens->num_tokens]);
-    const char * str_location = tz->output + (tz->w); // set the next available string location
+    const char * str_location = tz->output + (tz->w); // Set the next available string location
     write_token(token, TOKEN_WORD, str_location);
 
     if (is_quote(PEEK)) {
@@ -160,8 +150,7 @@ static State handle_start_token(Tokenizer * tz) {
 static State handle_normal_write_token(Tokenizer * tz) {
     Tokens * tokens = tz->tokens;
 
-
-    // move to the right until ws character, quote, or operator
+    // Move to the right until ws character, quote, or operator
     while ( !is_space(PEEK) && 
             !is_nullc(PEEK) && 
             !is_quote(PEEK) && 
@@ -171,7 +160,7 @@ static State handle_normal_write_token(Tokenizer * tz) {
     
     if (is_quote(PEEK)) {
         tz->quote = CONSUME; 
-        return STATE_QUOTE_WRITE_TOKEN; // if quote found, skip pass string pointer, l"s" -> ls, cstring pointer to l from previous
+        return STATE_QUOTE_WRITE_TOKEN; // l"s" -> ls
     } else if (set_special_candidates(PEEK)) {
         tz->at_start = 0;
         return STATE_SPECIAL_TOKEN;
@@ -193,7 +182,8 @@ static State handle_quote_write_token(Tokenizer * tz) {
         tz->tokens->num_tokens++;
         return STATE_EXIT;
     }
-    // safe to pass to handle_normal_write_token to deal with \0
+
+    // Safe to pass to handle_normal_write_token to deal with \0
     tz->quote = '\0';
     ADVANCE;
     return STATE_NORMAL_WRITE_TOKEN;
@@ -202,12 +192,13 @@ static State handle_quote_write_token(Tokenizer * tz) {
 static State handle_special_token(Tokenizer * tz) {
     Tokens * tokens = tz->tokens;
     TokenType token_type;
-    int token_size;
+    size_t token_size;
+
     validate_special_candidates(tz->input + tz->r, &token_type, &token_size); 
 
     if (token_type != TOKEN_ERROR) {
         
-        //special case a|, finish up previous token
+        // Special case a|, finish up previous token
         if (!(tz->at_start)) {
             WRITE('\0');
             tokens->num_tokens++;
@@ -215,23 +206,14 @@ static State handle_special_token(Tokenizer * tz) {
 
         tz->r += token_size;
         
+        // Create new token for special case
         Token * token = &(tokens->token_array[tokens->num_tokens]);
         write_token(token, token_type, SPECIAL_TOKENS[token_type]);
         tokens->num_tokens++;
         return STATE_START_TOKEN;
     }
 
-    // otherwise just write like normal character
+    // Otherwise just write like normal character
     WRITE(CONSUME);
     return STATE_NORMAL_WRITE_TOKEN;
 }
-
-static void write_token(Token * token, TokenType type, const char * text) {
-    token->type = type;
-    token->text = text;
-}
-
-#undef PEEK
-#undef ADVANCE
-#undef CONSUME
-#undef WRITE

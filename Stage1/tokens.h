@@ -1,7 +1,11 @@
 #ifndef TOKENS_H
 #define TOKENS_H
 
+#include <stddef.h>
+
 #include "const.h"
+
+/* ---------------------------- STRUCTS AND ENUMS --------------------------- */
 
 typedef enum {
     // Error type
@@ -32,38 +36,52 @@ typedef struct {
     int num_tokens;
 } Tokens;
 
+/* --------------------------------- GLOBALS -------------------------------- */
+
 extern const char * SPECIAL_TOKENS[NUMB_SPECIAL_TOKENS];
+extern const size_t SPECIAL_TOKENS_SIZE[NUMB_SPECIAL_TOKENS];
 
-extern const int SPECIAL_TOKENS_SIZE[NUMB_SPECIAL_TOKENS];
+/* --------------------------- FUNCTION PROTOTYPES -------------------------- */
 
-Token * index_tokens(Tokens * t, int index);
+// Tokens
+
+Token * index_tokens(Tokens * tokens, int index);
 
 /**
- * @brief retrieves the token count of tokens
- * @param t a pointer to a tokens struct
- * @return the count of tokens
+ * @brief Retrieves the token count of tokens
+ * @param t A pointer to a tokens struct
+ * @return The count of tokens
  */
-int num_tokens(Tokens * t);
+int num_tokens(Tokens * tokens);
 
+/**
+ * @brief Initialize the tokens struct from input_buffer
+ * @param tokens Tokens struct
+ * @param input_buffer Null-terminated input_buffer
+ * @warning input_buffer must be the same length as tokens cstring_storage.
+ * 
+ */
 void create_tokens(Tokens * tokens, const char * input_buffer);
 
-void test_tokens(Tokens * t);
+
+// Special token helpers
 
 /**
- * @brief sets the global candidates
- * @param c the character to be qualified
- * @return number of qualifying candidates
+ * @brief Sets the global candidates
+ * @param c The character to be qualified
+ * @return Number of qualifying candidates
+ * 
  */
 int set_special_candidates(const char c);
 
 /**
- * @brief used in conjuction with set_special_candidates.\n
+ * @brief Used in conjuction with set_special_candidates.
  * reads from the global candidates, determines wether or not that from a pointer to the character's starting position, it is a valid special tokens.
- * @param starting a pointer from a cstring in which the character appeared
- * @param return_type the returning type of the token, TOKEN_INVALID if invalid.
- * @param return_length the length of the token found, 1 if not found
+ * @param starting A pointer from a cstring in which the character appeared
+ * @param return_type The returning type of the token, TOKEN_INVALID if not found.
+ * @param return_length The length of the token string found, 1 if not found
  */
-void validate_special_candidates(const char * starting, TokenType * return_type, int * return_length);
+void validate_special_candidates(const char * starting, TokenType * return_type, size_t * return_length);
 
 
 #endif
