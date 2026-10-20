@@ -1,0 +1,57 @@
+
+Functions, Local vars, static global vars -> snake_case
+Enum/Structs -> Camel_Case
+Macros, global constant, enum values -> SCREAMING_SNAKE_CASE
+
+Docs for functions (can keep them brief)
+/**
+* 
+* @brief …
+* @param var …
+* …
+*
+*/
+
+// Inline with a capital
+
+Code should be split via comment headers (EXAMPLE)
+/* - - - - - - - - PROTOTYPES  - - - - - - - - */
+
+
+ALL CAPS
+Name should be appropriate 
+
+Keep all c modules at the top 
+#include <foo.h>
+…
+
+[empty space]
+#include “our.h”
+…
+
+Enum/Struct
+Typedef enum {
+	TAG_STATUS
+} Name;
+
+Typedef struct {
+	Var snake_case
+} Name;
+
+Note on helper functions:
+Helper functions prototypes must be above other function definitions
+Helper functions if simple enough can be defined in full at in-place of the prototype
+Helper function definition must be declared under the other function definitions
+Make sure they have the static
+
+No custom heap
+Too messy, c-strings must be defined on either stack or statically defined. Must be careful of scope
+
+No bools
+Functions should instead…
+Return 1, 0 for boolean like functions e.g. is_foo(Input) 1 -> truthy, 0 -> falsey
+Return 0, or some value < 0 for “error” prone functions e.g. set_value(Input)
+Return pointer or null for “error” prone functions e.g. get_cstring()
+
+Errnos are to only be set but either system calls, OR custom replacement for library function that included them previously e.g. execpve()
+
