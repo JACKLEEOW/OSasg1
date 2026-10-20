@@ -3,11 +3,15 @@
 
 #include "tokens.h"
 
+/* --------------------------------- MACROS --------------------------------- */
+
 #define MAX_ARGS 16
 #define MAX_PIPELINE_STAGES 7
 
+/* ---------------------------- STRUCTS AND ENUMS --------------------------- */
+
 typedef struct {
-    const char * argv[MAX_ARGS + 1];
+    const char * argv[MAX_ARGS + 1]; 
     unsigned int argc;
 } Command;
 
@@ -15,16 +19,17 @@ typedef struct {
     Command stages[MAX_PIPELINE_STAGES];
     int num_stages;
     int background;
-    const char * infile;
+    const char * infile;         
     const char * outfile;
     int append;
 } Pipeline;
 
 typedef enum {
-    PAR_OK,
-    PAR_ERROR,
-    PAR_REDIRECT_ERROR,
+    PAR_ERROR = -1,
+    PAR_OK
 } ParseStatus;
+
+/* --------------------------- FUNCTION PROTOTYPES -------------------------- */
 
 /**
  * @brief parses the tokens into a pipeline

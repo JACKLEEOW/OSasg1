@@ -6,8 +6,13 @@
 #include "errno.h"
 #include "cstring.h"
 
+/* --------------------------------- MACROS --------------------------------- */
+
 #define INTERNAL_BUFFER_SIZE 256
 
+/* ---------------------------- HELPER FUNCTIONS ---------------------------- */
+
+/** @brief Flushes buffer while writing */
 static int flush_buffer(int fd, const char *buffer, size_t length) {
     while (length > 0) {
         ssize_t bytes = write(fd, buffer, length);
@@ -21,6 +26,7 @@ static int flush_buffer(int fd, const char *buffer, size_t length) {
     return 0;
 }
 
+/** @brief Write + buffer */
 static int write_fd(int fd, const char *const messages[], size_t count) {
     int saved_errno = errno;
 
@@ -49,6 +55,8 @@ static int write_fd(int fd, const char *const messages[], size_t count) {
     errno = saved_errno;
     return return_value;
 }
+
+/* -------------------------- FUNCTION DEFINITIONS -------------------------- */
 
 int write_error(const char *const messages[], size_t count) {
     return write_fd(STDERR_FILENO, messages, count);

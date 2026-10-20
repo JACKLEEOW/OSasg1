@@ -1,7 +1,7 @@
 CC      := gcc
-CFLAGS  := -Wall -Wextra -std=c11 -g
+CFLAGS  := -Wall -Wextra -std=gnu11 -g
 LDLIBS  := -lcunit
-SRCS    := main.c cstring.c tokens.c special_tokens.c parser.c executor.c env.c path.c io.c builtin.c
+SRCS    := main.c cstring.c tokens.c special_tokens.c parser.c executor.c env.c path.c io.c builtin.c signals.c job_control.c
 OBJS    := $(SRCS:.c=.o)
 
 .PHONY: all clean test
@@ -27,6 +27,8 @@ path.o: env.h cstring.h path.h
 io.o: io.h
 builtin.o: builtin.h
 special_tokens.o: tokens.h
+signals.o: signals.h
+job_control.o: job_control.h
 
 
 clean:
