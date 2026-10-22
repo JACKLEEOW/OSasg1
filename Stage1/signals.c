@@ -33,8 +33,8 @@ static void handle_sigint(int sig) {
 /* --------------------------- FUNCTION DEFINITONS -------------------------- */
 
 int init_shell_signals() {
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
+    struct sigaction sa = {0};
+    // memset(&sa, 0, sizeof(sa));
     int success_flag = 0;
 
     sa.sa_handler = handle_sigchld;
@@ -64,8 +64,8 @@ int init_shell_signals() {
 }
 
 int restore_children_default_signals() {
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
+    struct sigaction sa = {0};
+    //memset(&sa, 0, sizeof(sa));
     int success_flag = 0;
 
     sa.sa_handler = SIG_DFL;
@@ -77,6 +77,9 @@ int restore_children_default_signals() {
         success_flag = -1;
     }
     if (sigaction(SIGTSTP, &sa, NULL) < 0) {
+        success_flag = -1;
+    }
+    if (sigaction(SIGTTOU, &sa, NULL) < 0) {
         success_flag = -1;
     }
 
