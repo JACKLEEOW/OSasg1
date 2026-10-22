@@ -14,7 +14,7 @@ static void init_pipeline(Pipeline * p) {
 }
 
 static Command * get_next_available_command(Pipeline * p) {
-    if (p->num_stages == MAX_PIPELINE_STAGES) return NULL;
+    if (p->num_stages >= MAX_PIPELINE_STAGES) return NULL;
     Command * command = &(p->stages[p->num_stages++]);
     command->argv[0] = NULL;
     command->argc = 0;
@@ -22,7 +22,7 @@ static Command * get_next_available_command(Pipeline * p) {
 }
 
 static int add_argv(Command * c, const char * arg) {
-    if (c->argc > MAX_ARGS) return -1;
+    if (c->argc >= MAX_ARGS) return -1;
     c->argv[c->argc] = arg;
     c->argc++;
     c->argv[c->argc] = NULL;
@@ -40,6 +40,14 @@ ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline) {
     
     new_command:
     command = get_next_available_command(pipeline);
+
+    // Handled by TOKEN_PIPE case
+    /*
+    if (command == NULL) {
+        WRITE_ERR(ERROR_START " Syntax error: Max command limit reached ("TO_STRING(MAX_PIPELINE_STAGES)")\n");
+        return PAR_ERROR;
+    }
+    */
 
     while (current_token_index < num_tokens(tokens)) {
         
@@ -60,7 +68,7 @@ ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline) {
             text = token->text;
 
             if (type != TOKEN_WORD) {
-                WRITE_ERR(ERROR_START " Syntax error: unexpected token '", text, "'\n");
+                WRITE_ERR(ERROR_START " Syntax error: Unexpected token '", text, "'\n");
                 return PAR_ERROR;
             }
 
@@ -80,7 +88,7 @@ ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline) {
             text = token->text;
 
             if (type != TOKEN_WORD) {
-                WRITE_ERR(ERROR_START " Syntax error: unexpected token '", text, "'\n");
+                WRITE_ERR(ERROR_START " Syntax error: Unexpected token '", text, "'\n");
                 return PAR_ERROR;
             }
 
@@ -96,7 +104,7 @@ ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline) {
             }
 
             if (pipeline->num_stages == MAX_PIPELINE_STAGES) {
-                WRITE_ERR(ERROR_START " Syntax error: Max pipeline limit reached ("TO_STRING(MAX_PIPELINE_STAGES)")\n");
+                WRITE_ERR(ERROR_START " Parse error: Stages exceeded pipeline limit ("TO_STRING(MAX_PIPELINE_STAGES)")\n");
                 return PAR_ERROR; 
             }
             current_token_index++;
@@ -121,7 +129,7 @@ ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline) {
         case TOKEN_WORD:
             
             if (add_argv(command, text) < 0) {
-                WRITE_ERR(ERROR_START " Command reached max number of arguments ("TO_STRING(MAX_ARGS)")\n");
+                WRITE_ERR(ERROR_START " Parse error: Command exceeded max number of arguments ("TO_STRING(MAX_ARGS)")\n");
                 return PAR_ERROR; 
             }
 
@@ -130,7 +138,7 @@ ParseStatus parse_tokens(Tokens * tokens, Pipeline * pipeline) {
 
             break;
         default:
-            WRITE_ERR(ERROR_START " Unsupported token type '", text, "'\n");
+            WRITE_ERR(ERROR_START " Syntax error: Unsupported token type '", text, "'\n");
             return PAR_ERROR; 
             break;
         }
